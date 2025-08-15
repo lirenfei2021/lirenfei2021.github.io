@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RSA密钥管理与加密工具</title>
+  <style>
+    :root {
+      --liquid-glass-bg: rgba(249, 249, 251, 0.85);
+      --liquid-glass-border: rgba(229, 229, 234, 0.5);
+      --liquid-glass-card: rgba(255, 255, 255, 0.75);
+      --liquid-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+      --text-primary: #1C1C1E;
+      --text-secondary: #636366;
+      --text-tertiary: #AEAEB2;
+      --accent-primary: #0077FF;
+      --accent-secondary: #4D9DFF;
+      --success: #34C759;
+      --warning: #FF9500;
+      --error: #FF3B30;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      --button-shadow-primary: rgba(0, 119, 255, 0.2);
+      --button-shadow-primary-hover: rgba(0, 119, 255, 0.3);
+      --button-shadow-danger: rgba(255, 59, 48, 0.2);
+      --button-shadow-danger-hover: rgba(255, 59, 48, 0.3);
+      --button-shadow-secondary: rgba(142, 142, 147, 0.2);
+      --button-shadow-warning: rgba(255, 149, 0, 0.2);
+      --button-shadow-warning-hover: rgba(255, 149, 0, 0.3);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --liquid-glass-bg: rgba(28, 28, 30, 0.85);
+        --liquid-glass-border: rgba(72, 72, 74, 0.5);
+        --liquid-glass-card: rgba(44, 44, 46, 0.75);
+        --liquid-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        --text-primary: #F5F5F7;
+        --text-secondary: #AEAEB2;
+        --text-tertiary: #636366;
+        --accent-primary: #0A84FF;
+        --accent-secondary: #64D2FF;
+        --button-shadow-primary: rgba(10, 132, 255, 0.3);
+        --button-shadow-primary-hover: rgba(10, 132, 255, 0.4);
+        --button-shadow-danger: rgba(255, 69, 58, 0.3);
+        --button-shadow-danger-hover: rgba(255, 69, 58, 0.4);
+        --button-shadow-secondary: rgba(142, 142, 147, 0.3);
+        --button-shadow-warning: rgba(255, 149, 0, 0.3);
+        --button-shadow-warning-hover: rgba(255, 149, 0, 0.4);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      background: var(--liquid-glass-bg);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--liquid-glass-border);
+      border-radius: var(--radius-lg);
+      background-image: radial-gradient(circle at 30% 30%, rgba(180, 220, 255, 0.1) 0%, transparent 80%);
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--liquid-glass-border); }
+
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 40px; height: 40px; background: var(--accent-primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 119, 255, 0.2); }
+    .logo-icon svg { width: 20px; height: 20px; fill: white; }
+    h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent-primary); margin-bottom: 4px; }
+
+    .col { display: flex; gap: 24px; margin-bottom: 24px; }
+    @media (max-width: 768px) { .col { flex-direction: column; } }
+
+    .panel { background: var(--liquid-glass-card); border: 1px solid var(--liquid-glass-border); border-radius: var(--radius-md); padding: 24px; flex: 1; min-width: 280px; box-shadow: var(--liquid-glass-shadow); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: var(--transition); }
+    .panel:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.1); }
+
+    h2 { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 18px; font-weight: 600; margin: 24px 0 16px; color: var(--text-primary); padding-bottom: 8px; border-bottom: 1px solid var(--liquid-glass-border); }
+
+    label { display: block; margin-top: 16px; font-weight: 500; font-size: 14px; color: var(--text-secondary); }
+
+    textarea, input[type="text"], select {
+      width: 100%; box-sizing: border-box; padding: 12px 14px; margin-top: 8px; border: 1px solid var(--liquid-glass-border); border-radius: var(--radius-sm); background: rgba(255,255,255,0.1); color: var(--text-primary); font-family: inherit; font-size: 14px; transition: var(--transition); resize: vertical; white-space: pre-wrap; word-break: break-all;
+    }
+    textarea:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(10,132,255,0.2); }
+
+    .status-card { background: rgba(10,132,255,0.1); border: 1px solid rgba(10,132,255,0.2); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+    .status-card svg { width: 18px; height: 18px; fill: var(--accent-primary); }
+
+    .warning-card {
+      color: var(--error); background: rgba(255,149,0,0.1); border: 1px solid rgba(255,149,0,0.2); border-radius: var(--radius-sm); padding: 12px 16px; margin: 16px 0; display: flex; align-items: center; gap: 12px; }
+    .warning-card svg { width: 18px; height: 18px; fill: var(--warning); }
+
+    .error-card {
+      color: var(--error); background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.2); border-radius: var(--radius-sm); padding: 12px 16px; margin: 16px 0; display: flex; align-items: center; gap: 12px; }
+    .error-card svg { width: 18px; height: 18px; fill: var(--error); }
+
+    .status-text { font-size: 14px; color: var(--text-primary); }
+    .error-text { font-size: 14px; color: var(--error); }
+
+    button { margin-top: 16px; padding: 12px 20px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px var(--button-shadow-primary); }
+    button.warning { background: linear-gradient(135deg, var(--warning), #ffb74d); box-shadow: 0 4px 12px var(--button-shadow-warning); }
+    button:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 6px 16px var(--button-shadow-primary-hover); }
+    button.warning:hover { box-shadow: 0 6px 16px var(--button-shadow-warning-hover); }
+
+    button:active { transform: translateY(0); }
+
+    button.secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--liquid-glass-border); box-shadow: 0 2px 6px var(--button-shadow-secondary); }
+    button.secondary:hover { box-shadow: 0 4px 10px var(--button-shadow-secondary); }
+
+    /* Danger：实心红色渐变 + 白色加粗文字（保持字体与字号不变） */
+    button.danger {
+      background: linear-gradient(135deg, var(--error), #ff6b60);
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px var(--button-shadow-danger);
+    }
+    button.danger:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px var(--button-shadow-danger-hover);
+    }
+
+    hr { border: none; height: 1px; background: var(--liquid-glass-border); margin: 24px 0; }
+
+    ul { list-style: none; padding-left: 0; }
+    li { border-bottom: 1px solid var(--liquid-glass-border); padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+    li:last-child { border-bottom: none; }
+
+    .key-item { flex: 1; }
+    .key-name { font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+    .key-fingerprint { font-size: 13px; color: var(--text-tertiary); }
+    .key-fingerprint span { color: var(--text-secondary); }
+
+    .key-actions { display: flex; gap: 8px; }
+    .key-actions button { margin-top: 0; padding: 8px 12px; font-size: 13px; }
+
+    small { color: var(--text-tertiary); font-size: 13px; display: block; margin-top: 8px; line-height: 1.5; }
+
+    footer { margin-top: 24px; font-size: 13px; color: var(--text-tertiary); border-top: 1px solid var(--liquid-glass-border); padding-top: 16px; }
+    .footer-note {
+      background: rgba(255, 149, 0, 0.1);
+      border: 1px solid rgba(255, 149, 0, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--warning);
+    }
+
+    .button-group { display: flex; gap: 12px; margin-top: 16px; }
+    .icon { width: 18px; height: 18px; fill: currentColor; }
+
+    .textarea-container { position: relative; }
+    textarea { padding-right: 70px; padding-top: 30px; }
+
+    .text-action-btn {
+      position: absolute; background: rgba(255, 255, 255, 0.2); border: none; border-radius: var(--radius-sm); padding: 5px 10px; color: var(--text-primary);
+      cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 12px; transition: background 0.2s; z-index: 10; box-shadow: 0 1px 3px var(--button-shadow-secondary);
+      right: 10px;
+    }
+    .text-action-btn:hover { background: rgba(255,255,255,0.3); box-shadow: 0 2px 5px var(--button-shadow-secondary); }
+
+    /* 让“粘贴”在上，“复制”在下（DOM顺序也已保持粘贴在复制上方） */
+    .paste-btn { top: 5px; }
+    .copy-btn  { top: 35px; }
+
+    /* 通知样式（跟随光标的小气泡） */
+    .notification {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0.8);
+      font-size: 14px;
+      max-width: 90vw;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      white-space: nowrap;
+      width: auto;
+    }
+    .notification.show {
+      opacity: 1;
+      transform: translate(-50%, -100%) scale(1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">
+          <!-- 将标题左侧图标替换为“锁” -->
+          <svg viewBox="0 0 24 24">
+            <path d="M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"></path>
+          </svg>
+        </div>
+        <div><h1>RSA 加密工具</h1></div>
+      </div>
+    </header>
+
+    <div class="col">
+      <div class="panel">
+        <h2>
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M22,19L22,21L2,21L2,19L22,19M21,7L20,7L20,5C20,3.9 19.1,3 18,3L6,3C4.9,3 4,3.9 4,5L4,7L3,7C2.45,7 2,7.45 2,8L2,16C2,16.55 2.45,17 3,17L21,17C21.55,17 22,16.55 22,16L22,8C22,7.45 21.55,7 21,7M13,7L11,7L11,5L13,5L13,7M9,7L7,7L7,5L9,5L9,7M17,7L15,7L15,5L17,5L17,7M9,15L7,15L7,13L9,13L9,15M13,15L11,15L11,13L13,13L13,15M17,15L15,15L15,13L17,13L17,15M9,11L7,11L7,9L9,9L9,11M13,11L11,11L11,9L13,9L13,11M17,11L15,11L15,9L17,9L17,11Z"></path>
+          </svg>
+          自身密钥
+        </h2>
+        <div class="status-card">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"></path>
+          </svg>
+          <div class="status-text" id="ownKeyStatus">尚未生成密钥</div>
+        </div>
+
+        <!-- 按钮：红色实心渐变 + 白色加粗 -->
+        <button id="genKeyBtn" class="danger">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M17,13H13V17H11V13H7V11H11V7H13V11H17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"></path>
+          </svg>
+          生成 2048 位 RSA 密钥对
+        </button>
+
+        <!-- 警告卡改为 error 红色 -->
+        <div class="error-card">
+          <!--
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"></path>
+          </svg>
+          -->
+          <div class="error-text"><strong>注意：</strong>若重新生成密钥对，之前的密钥对将立即失效并无法再解密以前的信息。<strong>此操作没有任何确认信息，且无法恢复。</strong></div>
+        </div>
+        
+        <div class="error-card">
+          <!--
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"></path>
+          </svg>
+          -->
+          <div class="error-text"><strong>您的密钥只保存在本地，请勿清除本网站的浏览数据，否则您的密钥将永久失效且无法恢复！</strong>若浏览数据被删除，您将无法再解密他人用您的旧密钥加密的的信息。<strong>如果您发现旧密钥丢失，请将新生成的公钥发送给他人，同时重新导入他人公钥。</strong></div>
+        </div>
+        
+        <label>导出公钥（PEM）</label>
+        <div class="textarea-container">
+          <textarea id="ownPublicPem" rows="4" readonly></textarea>
+          <!-- 已按要求移除右上角按钮 -->
+        </div>
+
+        <div class="button-group">
+          <button id="copyPubBtn">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path>
+            </svg>
+            复制公钥到剪贴板
+          </button>
+        </div>
+        
+        <hr />
+        
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"></path>
+          </svg>
+          加/解密
+        </h3>
+        <label>选择加密公钥</label>
+        <select id="encryptKeySelect">
+          <option value="">（我的公钥）</option>
+        </select>
+        
+        <label>明文 / 要加密的文本</label>
+        <div class="textarea-container">
+          <textarea id="plaintext" rows="6" placeholder="解密后的内容将显示在这里 / 输入要加密的明文"></textarea>
+          <!-- 粘贴在上 -->
+          <button class="text-action-btn paste-btn" data-target="plaintext">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+              <path d="M19,20H5V4H7V7H17V4H19M12,2A1,1 0 0,1 13,3A1,1 0 0,1 12,4A1,1 0 0,1 11,3A1,1 0 0,1 12,2M9,4H15V6H9V4M4,8H20V21H4V8Z"></path>
+            </svg>
+            粘贴
+          </button>
+          <!-- 复制在下 -->
+          <button class="text-action-btn copy-btn" data-target="plaintext">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+              <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path>
+            </svg>
+            复制
+          </button>
+        </div>
+        <button id="encryptBtn">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"></path>
+          </svg>
+          加密（使用所选他人公钥）
+        </button>
+        
+        <label>密文（Base64）</label>
+        <div class="textarea-container">
+          <textarea id="ciphertext" rows="6" placeholder="加密后的内容将显示在这里 / 输入要解密的密文"></textarea>
+          <!-- 粘贴在上 -->
+          <button class="text-action-btn paste-btn" data-target="ciphertext">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+              <path d="M19,20H5V4H7V7H17V4H19M12,2A1,1 0 0,1 13,3A1,1 0 0,1 12,4A1,1 0 0,1 11,3A1,1 0 0,1 12,2M9,4H15V6H9V4M4,8H20V21H4V8Z"></path>
+            </svg>
+            粘贴
+          </button>
+          <!-- 复制在下 -->
+          <button class="text-action-btn copy-btn" data-target="ciphertext">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+              <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path>
+            </svg>
+            复制
+          </button>
+        </div>
+        <button id="decryptBtn">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M2,5.27L3.28,4L20,20.72L18.73,22L15.73,19H6A2,2 0 0,1 4,17V10C4,8.9 4.9,8 6,8H8.73L2,5.27M8,15H6V17H8V15M9,15V17H13.73L9,12.27V15M14,10H18C19.1,10 20,10.9 20,12V15.18L18,13.18V12H16V13.18L14,11.18V10M9,10V10.18L7.82,9H6V10H9M18,8V6C18,4.9 17.1,4 16,4H14V6H16V8H14V10H16V12H14V14H16.82L20,17.18V12C20,10.9 19.1,10 18,10H16V8H18Z"></path>
+          </svg>
+          解密（使用你的本地私钥）
+        </button>
+      </div>
+
+      <div class="panel">
+        <h2>
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z"></path>
+          </svg>
+          他人公钥管理
+        </h2>
+        <label>添加公钥名称</label>
+        <input id="newKeyName" type="text" placeholder="例如：Alice 工作密钥">
+        
+        <label>粘贴 PEM（SubjectPublicKeyInfo）</label>
+        <div class="textarea-container">
+          <textarea id="pastePem" rows="6" placeholder="粘贴公钥内容..."></textarea>
+          <!-- 只有粘贴按钮即可 -->
+          <button class="text-action-btn paste-btn" data-target="pastePem">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+              <path d="M19,20H5V4H7V7H17V4H19M12,2A1,1 0 0,1 13,3A1,1 0 0,1 12,4A1,1 0 0,1 11,3A1,1 0 0,1 12,2M9,4H15V6H9V4M4,8H20V21H4V8Z"></path>
+            </svg>
+            粘贴
+          </button>
+        </div>
+        <button id="addPemBtn">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M19,20H5V4H7V7H17V4H19M9,11H15V15H11V13H9V11M15,3H21V9H15V3M17,5V7H19V5H17M3,3H9V9H3V3M5,5V7H7V5H5M3,15H9V21H3V15M5,17V19H7V17H5Z"></path>
+          </svg>
+          添加PEM
+        </button>
+        
+        <hr />
+        
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M4,6H20V16H4M20,18A2,2 0 0,0 22,16V6C22,4.89 21.1,4 20,4H4C2.89,4 2,4.89 2,6V16A2,2 0 0,0 4,18H0V20H24V18H20Z"></path>
+          </svg>
+          密钥库
+        </h3>
+        <ul id="keyList"></ul>
+        <small>点击删除以移除密钥。本地加密存储（AES-GCM），并显示 SHA-256 指纹末 4 位。</small>
+      </div>
+    </div>
+
+    <footer>
+      <div>运行环境：支持 WebCrypto 的浏览器</div>
+      <div class="footer-note">
+        <strong>注意：</strong>本网站由 AI 生成，所有加密和解密操作均在本地运行，所有用户数据均只保存在本地。本网站仅供学习与交流 RSA 加密相关知识，用户使用本网站时须遵守法律法规和道德准则，严禁将本网站用于商业用途或非法用途。一切因用户个人行为引发的法律责任由其自行承担。
+      </div>
+    </footer>
+  </div>
+  
+  <script>
+    // 数据库和存储配置
+    const dbName = "rsa_offline_db_v1";
+    const storeKeys = "externalKeys";
+    const storeMeta = "meta";
+    
+    let db = null;
+    let symmetricKey = null;
+    let privateKey = null;
+    let publicKey = null;
+    
+    // 元素引用
+    const ownPublicPemTextarea = document.getElementById('ownPublicPem');
+    const ownKeyStatus = document.getElementById('ownKeyStatus');
+    const encryptKeySelect = document.getElementById('encryptKeySelect');
+    const keyList = document.getElementById('keyList');
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', async () => {
+      await openDB();
+      await ensureSymmetricKey();
+      const loaded = await loadOwnKeysFromStore();
+
+      if(!loaded) {
+        // 首次无本地“我的密钥” => 立即自动生成并提示
+        await generateOwnKeyPair();
+        ownKeyStatus.textContent = '已自动生成 RSA-2048 密钥对（私钥已加密存储）';
+        const pem = await exportOwnPublicPEM();
+        ownPublicPemTextarea.value = pem;
+        // 在页面上端弹出提醒（用一个近似位置）
+        showNotification('已自动生成密钥对', {clientX: window.innerWidth/2, clientY: 60});
+      } else if(loaded) {
+        ownKeyStatus.textContent = '已加载本地密钥对（私钥已加密存储）';
+        const pubSpkiBase64 = await getMeta('own.public.spki');
+        if(pubSpkiBase64) {
+          ownPublicPemTextarea.value = spkiToPem(base64ToArrayBuffer(pubSpkiBase64));
+        }
+      }
+
+      await reloadExternalKeysUI();
+      
+      // 绑定事件
+      document.getElementById('genKeyBtn').addEventListener('click', generateKeyPairHandler);
+      document.getElementById('copyPubBtn').addEventListener('click', copyPublicKeyHandler);
+      document.getElementById('encryptBtn').addEventListener('click', encryptHandler);
+      document.getElementById('decryptBtn').addEventListener('click', decryptHandler);
+      document.getElementById('addPemBtn').addEventListener('click', addPemHandler);
+      keyList.addEventListener('click', handleKeyListActions);
+      
+      // 复制按钮事件
+      document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const targetId = this.getAttribute('data-target');
+          const textarea = document.getElementById(targetId);
+          copyToClipboard(textarea.value);
+          showNotification('已复制', e);
+        });
+      });
+      
+      // 粘贴按钮事件
+      document.querySelectorAll('.paste-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+          const targetId = this.getAttribute('data-target');
+          const textarea = document.getElementById(targetId);
+          try {
+            const text = await navigator.clipboard.readText();
+            textarea.value = text;
+            showNotification('已粘贴', e);
+          } catch (err) {
+            showNotification('粘贴失败', e);
+            console.error('粘贴失败:', err);
+          }
+        });
+      });
+    });
+    
+    // 在光标位置或目标文本框中央显示通知（按触发来源智能定位）
+    function showNotification(message, event) {
+      // 创建通知元素
+      const notif = document.createElement('div');
+      notif.className = 'notification';
+      notif.textContent = message;
+      document.body.appendChild(notif);
+
+      // 默认位置（若无法定位到具体文本框或传入了自定义坐标）
+      let x = window.innerWidth / 2;
+      let y = 60;
+      let placeAtElementCenter = false;
+
+      // 如果触发事件来自带 data-target 的按钮（复制/粘贴），优先定位到对应文本框的中央
+      try {
+        if (event && event.target && event.target.dataset && event.target.dataset.target) {
+          const targetId = event.target.dataset.target;
+          const el = document.getElementById(targetId);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            x = event.clientX;
+            y = event.clientY;
+            placeAtElementCenter = false
+          } else if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+            x = event.clientX; y = event.clientY;
+          }
+        } else if (event && typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+          // 非复制/粘贴的鼠标事件（保持原来的基于光标的行为）
+          x = event.clientX;
+          y = event.clientY;
+        } else if (event && event.clientX && event.clientY) {
+          x = event.clientX; y = event.clientY;
+        }
+      } catch (e) {
+        // 保持默认值
+      }
+
+      // 放置并动画显示
+      notif.style.left = `${x}px`;
+
+      if (placeAtElementCenter) {
+        // 将通知的中心对齐到文本框中央（垂直和水平都居中）
+        notif.style.top = `${y - 28}px`;
+        // 初始微缩并居中位置，随后放大到 1
+        notif.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        // 强制触发重绘后过渡到最终状态以获得动画
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            notif.style.opacity = '1';
+            notif.style.transform = 'translate(-50%, -50%) scale(1)';
+          });
+        });
+      } else {
+        // 原先的“在光标上方，且使阴影最下端与光标对齐”的行为保持不变
+        // 阴影向下扩展约 16px，因此把 top 上移 16px（与之前约定一致）
+        notif.style.top = `${y - 28}px`;
+        notif.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            notif.style.opacity = '1';
+            // 使用与 .notification.show 相同的视觉位置（底部中心对齐）
+            notif.style.transform = 'translate(-50%, -100%) scale(1)';
+          });
+        });
+      }
+
+      // 自动隐藏：1 秒后收起并移除
+      setTimeout(() => {
+        // 收起动画
+        notif.style.opacity = '0';
+        if (placeAtElementCenter) {
+          notif.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        } else {
+          notif.style.transform = 'translate(-50%, -100%) scale(0.8)';
+        }
+        setTimeout(() => {
+          if (notif && notif.parentNode) notif.parentNode.removeChild(notif);
+        }, 300);
+      }, 1000);
+    }
+    
+    // 复制到剪贴板
+    async function copyToClipboard(text) {
+      try { await navigator.clipboard.writeText(text); }
+      catch (err) { console.error('复制失败:', err); }
+    }
+    
+    // 数据库操作
+    async function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(dbName, 1);
+        req.onupgradeneeded = (ev) => {
+          const idb = ev.target.result;
+          if(!idb.objectStoreNames.contains(storeKeys)) {
+            idb.createObjectStore(storeKeys, { keyPath: "fingerprint" });
+          }
+          if(!idb.objectStoreNames.contains(storeMeta)) {
+            idb.createObjectStore(storeMeta, { keyPath: "k" });
+          }
+        };
+        req.onsuccess = () => { db = req.result; resolve(db); };
+        req.onerror = () => reject(req.error);
+      });
+    }
+    
+    async function getMeta(k) {
+      return new Promise((res, rej) => {
+        const tx = db.transaction(storeMeta, "readonly");
+        const store = tx.objectStore(storeMeta);
+        const r = store.get(k);
+        r.onsuccess = () => res(r.result ? r.result.v : null);
+        r.onerror = () => rej(r.error);
+      });
+    }
+    
+    async function putMeta(k, v) {
+      return new Promise((res, rej) => {
+        const tx = db.transaction(storeMeta, "readwrite");
+        const store = tx.objectStore(storeMeta);
+        const r = store.put({ k, v });
+        r.onsuccess = () => res(true);
+        r.onerror = () => rej(r.error);
+      });
+    }
+    
+    async function ensureSymmetricKey() {
+      if(symmetricKey) return symmetricKey;
+      const rawBase64 = await getMeta('symKeyRaw');
+      if(rawBase64) {
+        const raw = base64ToArrayBuffer(rawBase64);
+        symmetricKey = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt','decrypt']);
+        return symmetricKey;
+      }
+      symmetricKey = await crypto.subtle.generateKey({ name:'AES-GCM', length:256 }, true, ['encrypt','decrypt']);
+      const exported = await crypto.subtle.exportKey('raw', symmetricKey);
+      await putMeta('symKeyRaw', arrayBufferToBase64(exported));
+      return symmetricKey;
+    }
+    
+    async function saveExternalKey(item) {
+      const tx = db.transaction(storeKeys, 'readwrite');
+      const store = tx.objectStore(storeKeys);
+      return new Promise((res, rej) => {
+        const r = store.put(item);
+        r.onsuccess = () => res(true);
+        r.onerror = () => rej(r.error);
+      });
+    }
+    
+    async function getAllExternalKeysFromDB() {
+      return new Promise((res, rej) => {
+        const tx = db.transaction(storeKeys, 'readonly');
+        const store = tx.objectStore(storeKeys);
+        const r = store.getAll();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror = () => rej(r.error);
+      });
+    }
+    
+    async function deleteExternalKeyDB(fingerprint) {
+      return new Promise((res, rej) => {
+        const tx = db.transaction(storeKeys, 'readwrite');
+        const store = tx.objectStore(storeKeys);
+        const r = store.delete(fingerprint);
+        r.onsuccess = () => res(true);
+        r.onerror = () => rej(r.error);
+      });
+    }
+    
+    // 加解密函数
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i=0; i<bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+    function base64ToArrayBuffer(base64) {
+      const binary = atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for(let i=0;i<len;i++) bytes[i] = binary.charCodeAt(i);
+      return bytes.buffer;
+    }
+    function buf2hex(buffer) { return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2,'0')).join(''); }
+    function shortFingerprintHex(hex) { return hex.slice(-4); }
+    function pemToArrayBuffer(pem) {
+      const b64 = pem.replace(/-----BEGIN PUBLIC KEY-----/g,'').replace(/-----END PUBLIC KEY-----/g,'').replace(/\s+/g,'');
+      return base64ToArrayBuffer(b64);
+    }
+    function spkiToPem(spkiBuffer) {
+      const b64 = arrayBufferToBase64(spkiBuffer);
+      const lines = b64.match(/.{1,64}/g)||[];
+      return "-----BEGIN PUBLIC KEY-----\n"+lines.join("\n")+"\n-----END PUBLIC KEY-----\n";
+    }
+    async function spkiFingerprintHex(spkiBuffer) {
+      const hash = await crypto.subtle.digest('SHA-256', spkiBuffer);
+      return buf2hex(hash);
+    }
+    async function exportOwnPublicPEM() {
+      if(!publicKey) return '';
+      const spki = await crypto.subtle.exportKey('spki', publicKey);
+      return spkiToPem(spki);
+    }
+    
+    async function generateOwnKeyPair() {
+      const kp = await crypto.subtle.generateKey(
+        { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([0x01,0x00,0x01]), hash: 'SHA-256' },
+        true,
+        ['encrypt','decrypt']
+      );
+      privateKey = kp.privateKey;
+      publicKey = kp.publicKey;
+      
+      const spki = await crypto.subtle.exportKey('spki', publicKey);
+      const pkcs8 = await crypto.subtle.exportKey('pkcs8', privateKey);
+      
+      const sym = await ensureSymmetricKey();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, sym, pkcs8);
+      
+      await putMeta('own.private.enc', arrayBufferToBase64(enc));
+      await putMeta('own.private.iv', arrayBufferToBase64(iv));
+      await putMeta('own.public.spki', arrayBufferToBase64(spki));
+      await putMeta('own.generated', (new Date()).toISOString());
+      return { spki, pkcs8 };
+    }
+    
+    async function loadOwnKeysFromStore() {
+      const encBase64 = await getMeta('own.private.enc');
+      const ivBase64 = await getMeta('own.private.iv');
+      const spkiBase64 = await getMeta('own.public.spki');
+      if(!encBase64 || !ivBase64 || !spkiBase64) return false;
+      const enc = base64ToArrayBuffer(encBase64);
+      const iv = base64ToArrayBuffer(ivBase64);
+      const spki = base64ToArrayBuffer(spkiBase64);
+      const sym = await ensureSymmetricKey();
+      try {
+        const pkcs8 = await crypto.subtle.decrypt({ name:'AES-GCM', iv: new Uint8Array(iv) }, sym, enc);
+        privateKey = await crypto.subtle.importKey('pkcs8', pkcs8, { name:'RSA-OAEP', hash:'SHA-256' }, true, ['decrypt']);
+        publicKey  = await crypto.subtle.importKey('spki', spki, { name:'RSA-OAEP', hash:'SHA-256' }, true, ['encrypt']);
+        return true;
+      } catch (e) {
+        console.error("Failed to decrypt/import stored own key:", e);
+        return false;
+      }
+    }
+    
+    async function addExternalKeyFromSPKI(spkiBuffer, name) {
+      const fp = await spkiFingerprintHex(spkiBuffer);
+      const all = await getAllExternalKeysFromDB();
+      if(all.find(i=>i.fingerprint === fp)) throw new Error("公钥已存在");
+      const sym = await ensureSymmetricKey();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, sym, spkiBuffer);
+      const item = {
+        fingerprint: fp,
+        name: name || ("导入密钥 " + new Date().toLocaleDateString()),
+        createdAt: (new Date()).toISOString(),
+        spki_enc: arrayBufferToBase64(enc),
+        iv: arrayBufferToBase64(iv)
+      };
+      await saveExternalKey(item);
+      return item;
+    }
+    
+    async function reloadExternalKeysUI() {
+      const items = await getAllExternalKeysFromDB();
+      keyList.innerHTML = '';
+      while(encryptKeySelect.options.length>1) encryptKeySelect.remove(1);
+      for(const it of items) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="key-item">
+            <div class="key-name">${escapeHtml(it.name)}</div>
+            <div class="key-fingerprint">指纹: <span>${it.fingerprint.slice(-12)} (…${shortFingerprintHex(it.fingerprint)})</span></div>
+          </div>
+          <div class="key-actions">
+            <button class="secondary use-key" data-fp="${it.fingerprint}">选用</button>
+            <button class="danger delete-key" data-fp="${it.fingerprint}">删除</button>
+          </div>
+        `;
+        keyList.appendChild(li);
+        const opt = document.createElement('option');
+        opt.value = it.fingerprint;
+        opt.textContent = `${it.name} (${it.fingerprint.slice(-4)})`;
+        encryptKeySelect.appendChild(opt);
+      }
+    }
+    
+    async function importPemString(pemText, name) {
+      let spkiBuf;
+      try {
+        if(pemText.includes('-----BEGIN PUBLIC KEY-----')) {
+          spkiBuf = pemToArrayBuffer(pemText);
+        } else {
+          spkiBuf = base64ToArrayBuffer(pemText.trim());
+        }
+        await crypto.subtle.importKey('spki', spkiBuf, { name:'RSA-OAEP', hash:'SHA-256' }, true, ['encrypt']);
+      } catch(e) {
+        throw new Error("无效PEM/DER格式: "+e.message);
+      }
+      const item = await addExternalKeyFromSPKI(spkiBuf, name);
+      return item;
+    }
+    
+    async function encryptDataWithPublic(spkiArrayBuffer, plainArrayBuffer) {
+      const pub = await crypto.subtle.importKey('spki', spkiArrayBuffer, { name:'RSA-OAEP', hash:'SHA-256' }, true, ['encrypt']);
+      const keyBytes = 2048/8;
+      const hashLen = 32;
+      const maxChunk = keyBytes - 2*hashLen - 2;
+      const plainBytes = new Uint8Array(plainArrayBuffer);
+      const outChunks = [];
+      for(let off=0; off<plainBytes.length; off += maxChunk) {
+        const slice = plainBytes.slice(off, Math.min(off+maxChunk, plainBytes.length));
+        const enc = await crypto.subtle.encrypt({ name:'RSA-OAEP' }, pub, slice);
+        outChunks.push(new Uint8Array(enc));
+      }
+      let totalLen = outChunks.reduce((s,c)=>s+c.length,0);
+      const joined = new Uint8Array(totalLen);
+      let pos=0;
+      for(const c of outChunks) { joined.set(c,pos); pos+=c.length; }
+      return joined.buffer;
+    }
+    
+    async function decryptDataWithPrivate(cipherArrayBuffer) {
+      if(!privateKey) throw new Error("未加载私钥");
+      const blockSize = 2048/8;
+      const bytes = new Uint8Array(cipherArrayBuffer);
+      const out = [];
+      for(let off=0; off<bytes.length; off += blockSize) {
+        const chunk = bytes.slice(off, Math.min(off+blockSize, bytes.length));
+        const dec = await crypto.subtle.decrypt({ name:'RSA-OAEP' }, privateKey, chunk);
+        out.push(new Uint8Array(dec));
+      }
+      let total = out.reduce((s,c)=>s+c.length,0);
+      const joined = new Uint8Array(total); 
+      let p=0;
+      for(const c of out) { joined.set(c,p); p+=c.length; }
+      return joined.buffer;
+    }
+    
+    // 事件处理器
+    async function generateKeyPairHandler(e) {
+      const btn = document.getElementById('genKeyBtn');
+      btn.disabled = true;
+      try {
+        await generateOwnKeyPair();
+        ownKeyStatus.textContent = '已生成 RSA-2048 密钥对（私钥已加密存储）';
+        const pem = await exportOwnPublicPEM();
+        ownPublicPemTextarea.value = pem;
+        await reloadExternalKeysUI();
+        showNotification('密钥对已生成', e);
+      } catch(e) {
+        showNotification('生成失败: ' + e.message, e);
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    
+    async function copyPublicKeyHandler(e) {
+      const pem = ownPublicPemTextarea.value;
+      if(!pem) { showNotification('没有公钥可以复制', e); return; }
+      try {
+        await navigator.clipboard.writeText(pem);
+        showNotification('已复制', e);
+      } catch (e) {
+        showNotification('复制失败: ' + e.message, e);
+      }
+    }
+    
+    async function encryptHandler(e) {
+      try {
+        const fp = encryptKeySelect.value || null;
+        let spkiBuf;
+        if(!fp) {
+          const pubSpkiBase64 = await getMeta('own.public.spki');
+          if(!pubSpkiBase64) { showNotification('请先生成密钥', e); return; }
+          spkiBuf = base64ToArrayBuffer(pubSpkiBase64);
+        } else {
+          const items = await getAllExternalKeysFromDB();
+          const item = items.find(i=>i.fingerprint===fp);
+          if(!item) { showNotification('选定密钥找不到', e); return; }
+          const sym = await ensureSymmetricKey();
+          const enc = base64ToArrayBuffer(item.spki_enc);
+          const iv = base64ToArrayBuffer(item.iv);
+          const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv: new Uint8Array(iv) }, sym, enc);
+          spkiBuf = plain;
+        }
+        const text = document.getElementById('plaintext').value || '';
+        if(!text) { showNotification('请输入要加密的文本', e); return; }
+        const encBuf = await encryptDataWithPublic(spkiBuf, new TextEncoder().encode(text));
+        document.getElementById('ciphertext').value = arrayBufferToBase64(encBuf);
+        showNotification('加密完成', e);
+      } catch(e) {
+        showNotification('加密失败: ' + e.message, e);
+        console.error(e);
+      }
+    }
+    
+    async function decryptHandler(e) {
+      try {
+        const loaded = await loadOwnKeysFromStore();
+        if(!loaded) { showNotification('未找到本地私钥，请先生成密钥', e); return; }
+        const b64 = document.getElementById('ciphertext').value.trim();
+        if(!b64) { showNotification('请输入 Base64 密文', e); return; }
+        const cipherBuf = base64ToArrayBuffer(b64);
+        const decBuf = await decryptDataWithPrivate(cipherBuf);
+        const txt = new TextDecoder().decode(decBuf);
+        document.getElementById('plaintext').value = txt;
+        showNotification('解密完成', e);
+      } catch(e) {
+        showNotification('解密失败: ' + e.message, e);
+        console.error(e);
+      }
+    }
+    
+    async function addPemHandler(e) {
+      const pem = document.getElementById('pastePem').value.trim();
+      if(!pem) { showNotification('请输入 PEM', e); return; }
+      try {
+        await importPemString(pem, document.getElementById('newKeyName').value);
+        showNotification('导入成功', e);
+        document.getElementById('pastePem').value = '';
+        document.getElementById('newKeyName').value = '';
+        await reloadExternalKeysUI();
+      } catch(e) {
+        showNotification('导入失败: '+e.message, e);
+      }
+    }
+    
+    function handleKeyListActions(e) {
+      if(e.target.classList.contains('use-key')) {
+        const fp = e.target.dataset.fp;
+        encryptKeySelect.value = fp;
+        showNotification('已选用密钥', e);
+      } else if(e.target.classList.contains('delete-key')) {
+        const fp = e.target.dataset.fp;
+        const keyName = e.target.closest('li').querySelector('.key-name').textContent;
+        deleteExternalKeyDB(fp)
+          .then(() => { showNotification(`已删除公钥: ${keyName}`, e); reloadExternalKeysUI(); })
+          .catch(err => { showNotification(`删除失败: ${err.message}`, e); });
+      }
+    }
+    
+    // 辅助函数
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+    }
+  </script>
+</body>
+</html>
