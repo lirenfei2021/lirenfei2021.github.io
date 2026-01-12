@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>第一届灵珠杯辩论赛 - 赛事概览</title>
+
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome (CDN) -->
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Fonts -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=JetBrains+Mono:wght@500&display=swap');
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .mono-font { font-family: 'JetBrains Mono', monospace; }
+
+    .section-title {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 1.25rem;
+      color: #111827;
+      font-weight: 700;
+      font-size: clamp(1.25rem, 2.2vw, 1.5rem);
+      line-height: 1.2;
+    }
+    .section-title::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -6px;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #ef4444, transparent);
+      border-radius: 999px;
+    }
+
+    /* Simple toast */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.92);
+      color: #e5e7eb;
+      font-size: 13px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease;
+    }
+    .toast.show { opacity: 1; }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .toast { transition: none; }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen pb-12 text-[15px] sm:text-base">
+  <!-- Header -->
+  <header class="bg-slate-900 text-white py-7 sm:py-8 shadow-lg">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 tracking-wide">第一届灵珠杯辩论赛</h1>
+      <p class="text-slate-400 text-sm md:text-base">赛事核心信息概览</p>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 mt-6 sm:mt-8 max-w-screen-lg">
+
+    <!-- 1. 关键时间轴 -->
+    <section class="mb-10 sm:mb-12 bg-white rounded-xl shadow-sm p-5 sm:p-6 md:p-8" aria-labelledby="sec-timeline">
+      <h2 id="sec-timeline" class="section-title">
+        <i class="far fa-clock mr-2 text-red-500" aria-hidden="true"></i>关键时间节点
+      </h2>
+
+      <div class="relative pl-10 sm:pl-12 space-y-8 mt-4">
+        <!-- Spine -->
+        <div class="absolute left-3.5 sm:left-4 top-0 bottom-0 w-px bg-gray-200" aria-hidden="true"></div>
+
+        <!-- Node 1 -->
+        <div class="relative z-10">
+          <div class="absolute -left-9 sm:-left-10 bg-red-500 rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 mt-1.5 border-4 border-white shadow" aria-hidden="true"></div>
+          <div>
+            <span class="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded mb-1">截止</span>
+            <h3 class="text-base sm:text-lg font-bold text-gray-800">1月26日 23:59</h3>
+            <p class="text-gray-600 font-medium">选手/评委报名截止、辩题库征集截止</p>
+          </div>
+        </div>
+
+        <!-- Node 2 -->
+        <div class="relative z-10">
+          <div class="absolute -left-9 sm:-left-10 bg-blue-500 rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 mt-1.5 border-4 border-white shadow" aria-hidden="true"></div>
+          <div>
+            <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded mb-1">公示</span>
+            <h3 class="text-base sm:text-lg font-bold text-gray-800">1月31日 23:59 前</h3>
+            <p class="text-gray-600 font-medium">评委竞选截止、发布辩题及赛程表</p>
+          </div>
+        </div>
+
+        <!-- Node 3 -->
+        <div class="relative z-10">
+          <div class="absolute -left-9 sm:-left-10 bg-purple-600 rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 mt-1.5 border-4 border-white shadow" aria-hidden="true"></div>
+          <div>
+            <span class="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded mb-1">比赛</span>
+            <h3 class="text-base sm:text-lg font-bold text-gray-800">2月2日 - 2月6日</h3>
+            <div class="text-gray-600 mt-1 text-sm">
+              <p class="font-bold">
+                <i class="fas fa-sun mr-1" aria-hidden="true"></i>
+                优先时段: 17:35 - 18:15
+              </p>
+              <p class="text-gray-400 mt-1">备选时段: 12:15 - 13:00 (需控制音量)</p>
+              <p class="text-purple-600 font-bold mt-2">
+                <i class="fas fa-trophy mr-1" aria-hidden="true"></i>
+                决赛预计: 2月6日
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 报名入口 -->
+    <section class="mb-10 sm:mb-12 bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl shadow-md p-5 sm:p-6 md:p-8 text-white flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 md:gap-10" aria-labelledby="sec-reg">
+      <div class="md:flex-1">
+        <h2 id="sec-reg" class="text-lg sm:text-xl font-bold mb-2">
+          <i class="fas fa-edit mr-2" aria-hidden="true"></i>立即报名
+        </h2>
+        <p class="text-slate-300 text-sm">建议使用表单报名，找不到队伍可加群：1077436008</p>
+      </div>
+
+      <div class="w-full md:w-auto md:max-w-md bg-black/30 p-4 rounded-lg border border-slate-600 min-w-0">
+        <p class="text-xs text-slate-400 mb-1">报名链接（点击或回车复制）</p>
+
+        <!-- Copy area -->
+        <div
+          class="flex items-center gap-2 cursor-pointer group select-none min-w-0"
+          id="copyArea"
+          role="button"
+          tabindex="0"
+          aria-label="复制报名链接"
+        >
+          <code class="mono-font text-green-400 text-sm md:text-base break-all flex-1 min-w-0" id="regLink">https://forms.cloud.microsoft/r/FBBGtcXwkD</code>
+          <i class="fas fa-copy text-slate-400 group-hover:text-white transition-colors" aria-hidden="true"></i>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <a
+            class="text-xs text-slate-300 underline underline-offset-2 hover:text-white"
+            href="https://forms.cloud.microsoft/r/FBBGtcXwkD"
+            target="_blank"
+            rel="noopener noreferrer"
+          >打开链接</a>
+          <span class="text-slate-500 text-xs" aria-hidden="true">•</span>
+          <span class="text-slate-400 text-xs">复制更适合转发到群聊</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 赛制流程表 -->
+    <section class="mb-10 sm:mb-12" aria-labelledby="sec-format">
+      <h2 id="sec-format" class="section-title">
+        <i class="fas fa-gavel mr-2 text-slate-700" aria-hidden="true"></i>比赛赛制 (总时长: 23分钟)
+      </h2>
+
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <!-- Desktop header -->
+        <div class="hidden md:grid md:grid-cols-12 bg-slate-100 text-slate-600 font-bold text-sm py-3 px-4 uppercase tracking-wider">
+          <div class="col-span-3">阶段</div>
+          <div class="col-span-6">发言方 & 内容</div>
+          <div class="col-span-3 text-right">时长</div>
+        </div>
+
+        <!-- 开篇 -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-0 border-b border-gray-100 items-start md:items-center py-4 px-4 hover:bg-slate-50">
+          <div class="md:col-span-3 font-bold text-slate-700">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">阶段</span>
+            开篇
+          </div>
+          <div class="md:col-span-6 space-y-2">
+            <span class="md:hidden text-xs text-gray-400 block">发言方 & 内容</span>
+            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-2" aria-hidden="true"></span>正方一辩 立论</div>
+            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-red-500 mr-2" aria-hidden="true"></span>反方一辩 立论</div>
+          </div>
+          <div class="md:col-span-3 md:text-right font-mono text-slate-500 text-sm">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">时长</span>
+            <div>各2分30秒</div>
+          </div>
+        </div>
+
+        <!-- 交锋 -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-0 border-b border-gray-100 items-start md:items-center py-4 px-4 hover:bg-slate-50">
+          <div class="md:col-span-3 font-bold text-slate-700">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">阶段</span>
+            交锋
+          </div>
+          <div class="md:col-span-6 space-y-3">
+            <span class="md:hidden text-xs text-gray-400 block">发言方 & 内容</span>
+            <div class="text-sm">
+              <span class="font-bold text-blue-600">正方二辩</span> 质询 反方任意辩手
+              <div class="text-xs text-gray-400 mt-0.5">需先指定回答者，单边计时</div>
+            </div>
+            <div class="text-sm">
+              <span class="font-bold text-red-600">反方二辩</span> 质询 正方任意辩手
+              <div class="text-xs text-gray-400 mt-0.5">需先指定回答者，单边计时</div>
+            </div>
+          </div>
+          <div class="md:col-span-3 md:text-right font-mono text-slate-500 text-sm">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">时长</span>
+            <div>各1分30秒</div>
+          </div>
+        </div>
+
+        <!-- 自由辩 -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-0 border-b border-gray-100 items-start md:items-center py-4 px-4 bg-yellow-50/50">
+          <div class="md:col-span-3 font-bold text-yellow-700">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">阶段</span>
+            自由辩论
+          </div>
+          <div class="md:col-span-6">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">发言方 & 内容</span>
+            <div class="text-sm text-gray-700">双方交替发言，正方先发</div>
+            <div class="text-xs text-gray-400 mt-1">任一辩手可发言，不可打断</div>
+          </div>
+          <div class="md:col-span-3 md:text-right font-mono text-slate-500 text-sm">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">时长</span>
+            <div><span class="text-xs text-gray-400">双方各</span> 5分钟</div>
+          </div>
+        </div>
+
+        <!-- 结辩 -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-0 items-start md:items-center py-4 px-4 hover:bg-slate-50">
+          <div class="md:col-span-3 font-bold text-slate-700">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">阶段</span>
+            结辩
+          </div>
+          <div class="md:col-span-6 space-y-2">
+            <span class="md:hidden text-xs text-gray-400 block">发言方 & 内容</span>
+            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-red-500 mr-2" aria-hidden="true"></span>反方三辩 总结</div>
+            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-2" aria-hidden="true"></span>正方三辩 总结</div>
+          </div>
+          <div class="md:col-span-3 md:text-right font-mono text-slate-500 text-sm">
+            <span class="md:hidden text-xs text-gray-400 block mb-1">时长</span>
+            <div>各2分30秒</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 评分规则 -->
+    <section class="mb-10 sm:mb-12" aria-labelledby="sec-score">
+      <h2 id="sec-score" class="section-title">
+        <i class="fas fa-balance-scale mr-2 text-slate-700" aria-hidden="true"></i>评分规则 (第四章核心)
+      </h2>
+
+      <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-indigo-500">
+          <h3 class="font-bold text-lg mb-2 text-indigo-700">印象票</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">基于对论点、架构及展开程度的整体印象进行投票。</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-emerald-500">
+          <h3 class="font-bold text-lg mb-2 text-emerald-700">分数票</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            基于每环节技术表现评分。分数高者获该评委分数票。
+            <span class="text-xs text-gray-400 block mt-1">(单项0-5分)</span>
+          </p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-amber-500">
+          <h3 class="font-bold text-lg mb-2 text-amber-700">平衡票</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            体现双方水准差距。可投1票给一方，或各0.5票以示均衡。
+            <span class="font-bold text-amber-600">不可弃投。</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-slate-800 text-slate-200 p-6 rounded-xl">
+        <h3 class="font-bold text-white mb-3 flex items-center">
+          <i class="fas fa-crown text-yellow-400 mr-2" aria-hidden="true"></i> 获胜判定
+        </h3>
+        <ol class="list-decimal list-inside space-y-2 text-sm md:text-base">
+          <li><strong>总票数过半者</strong>胜 (印象票 + 分数票 + 平衡票)。</li>
+          <li>
+            若总票数平局：
+            <ul class="list-none ml-6 mt-1 text-slate-400 text-xs md:text-sm space-y-1">
+              <li><i class="fas fa-arrow-right text-xs mr-1" aria-hidden="true"></i> 优先看 <strong>分数票</strong> 更多者胜。</li>
+              <li><i class="fas fa-arrow-right text-xs mr-1" aria-hidden="true"></i> 若分数票仍平，则 <strong>最佳辩手</strong> 所在方胜。</li>
+            </ul>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-gray-400 text-xs py-8 border-t border-gray-200">
+      <p>第一届灵珠杯辩论赛组委会</p>
+      <p class="mt-1">所有时间均为北京时间 (UTC+8)</p>
+    </footer>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">链接已复制到剪贴板</div>
+
+  <script>
+    (function () {
+      const copyArea = document.getElementById('copyArea');
+      const regLinkEl = document.getElementById('regLink');
+      const toast = document.getElementById('toast');
+
+      function showToast(message) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.add('show');
+        window.clearTimeout(showToast._t);
+        showToast._t = window.setTimeout(() => toast.classList.remove('show'), 1400);
+      }
+
+      async function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(ta);
+        }
+      }
+
+      async function copyLink() {
+        const linkText = (regLinkEl && (regLinkEl.innerText || regLinkEl.textContent) || '').trim();
+        if (!linkText) {
+          alert('未找到可复制的链接。');
+          return;
+        }
+        try {
+          await copyText(linkText);
+          alert('链接已复制到剪贴板！');
+          showToast('链接已复制到剪贴板');
+        } catch (err) {
+          console.error('复制失败', err);
+          alert('复制失败，请手动选择并复制链接。');
+        }
+      }
+
+      if (copyArea) {
+        copyArea.addEventListener('click', copyLink);
+        copyArea.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            copyLink();
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
