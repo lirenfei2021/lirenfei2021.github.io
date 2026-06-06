@@ -1139,10 +1139,6 @@ async function handleMultimodalAudio(blob,mimeType){
   msgs.push({role:'user',content:[{type:'input_audio',input_audio:{data:base64,format}}]});  
   const baseUrl=cfg.mmBaseUrl.replace(/\/$/,'');  
   const headers={'Content-Type':'application/json','Authorization':`Bearer ${cfg.mmApiKey}`};  
-  if(cfg.mmProvider==='openrouter'||cfg.mmBaseUrl.includes('openrouter')){  
-    headers['HTTP-Referer']='https://voiceflow.app';  
-    headers['X-Title']='VoiceFlow';  
-  }  
   const res=await apiFetch(`${baseUrl}/chat/completions`,{  
     method:'POST',headers,  
     body:JSON.stringify({model:cfg.mmModel,messages:msgs,max_tokens:1000,temperature:0.3,modalities:['text']}),  
