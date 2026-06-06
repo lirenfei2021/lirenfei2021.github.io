@@ -1111,10 +1111,6 @@ async function translate(text){
   if(!cfg.transApiKey){toast('请先配置翻译 API Key','error',6000);openSettings();return null;}  
   const baseUrl=cfg.transBaseUrl.replace(/\/$/,'');  
   const headers={'Content-Type':'application/json','Authorization':`Bearer ${cfg.transApiKey}`};  
-  if(cfg.transProvider==='openrouter'||cfg.transBaseUrl.includes('openrouter')){  
-    headers['HTTP-Referer']='https://voiceflow.app';  
-    headers['X-Title']='VoiceFlow';  
-  }  
   const res=await apiFetch(`${baseUrl}/chat/completions`,{  
     method:'POST',headers,  
     body:JSON.stringify({model:cfg.transModel,messages:buildTranslationMessages(text),max_tokens:1000,temperature:0.3}),  
