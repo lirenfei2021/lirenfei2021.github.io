@@ -1,0 +1,1345 @@
+<!DOCTYPE html>  
+<html lang="zh-CN">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>VoiceFlow — 实时语音翻译</title>  
+<link rel="preconnect" href="https://fonts.googleapis.com">  
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">  
+<style>  
+/* ============================================================  
+   CSS VARIABLES & RESET  
+   ============================================================ */  
+:root {  
+  --bg-0:#080a0f; --bg-1:#0d1017; --bg-2:#131720; --bg-3:#1a1f2e; --bg-4:#222838; --bg-5:#2c3347;  
+  --accent:#3b82f6; --accent-glow:rgba(59,130,246,.25); --accent-dim:#1d4ed8;  
+  --accent2:#06b6d4; --accent3:#8b5cf6; --success:#10b981; --warn:#f59e0b; --error:#ef4444;  
+  --text-0:#f0f4ff; --text-1:#bbc5de; --text-2:#7a86a0; --text-3:#4a536b;  
+  --border:rgba(255,255,255,.06); --border-active:rgba(59,130,246,.5);  
+  --radius-sm:6px; --radius-md:12px; --radius-lg:20px; --radius-full:9999px;  
+  --shadow-glow:0 0 40px rgba(59,130,246,.15),0 4px 24px rgba(0,0,0,.4);  
+  --shadow-card:0 2px 12px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.2);  
+  --transition:.2s cubic-bezier(.4,0,.2,1); --transition-slow:.4s cubic-bezier(.4,0,.2,1);  
+  --font-display:'Syne',sans-serif; --font-body:'Space Grotesk',sans-serif; --font-mono:'DM Mono',monospace;  
+}  
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}  
+html{font-size:16px;scroll-behavior:smooth;}  
+body{font-family:var(--font-body);background:var(--bg-0);color:var(--text-0);min-height:100vh;overflow-x:hidden;line-height:1.5;}  
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4;}  
+::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-track{background:var(--bg-1);} ::-webkit-scrollbar-thumb{background:var(--bg-5);border-radius:3px;} ::-webkit-scrollbar-thumb:hover{background:var(--accent);}  
+  
+/* ============================================================  
+   LAYOUT  
+   ============================================================ */  
+#app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:24px 20px;min-height:100vh;}  
+  
+/* ============================================================  
+   SETUP BANNER — 醒目的首次引导横幅  
+   ============================================================ */  
+#setupBanner{  
+  background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(239,68,68,.08));  
+  border:1.5px solid rgba(245,158,11,.5);  
+  border-radius:var(--radius-lg);  
+  padding:20px 22px;  
+  margin-bottom:20px;  
+  position:relative;  
+  overflow:hidden;  
+  animation:bannerPulse 3s ease-in-out infinite;  
+}  
+#setupBanner::before{  
+  content:'';position:absolute;inset:0;  
+  background:linear-gradient(135deg,rgba(245,158,11,.04),transparent);  
+  pointer-events:none;  
+}  
+@keyframes bannerPulse{  
+  0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0);}  
+  50%{box-shadow:0 0 0 4px rgba(245,158,11,.12);}  
+}  
+.banner-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}  
+.banner-icon{font-size:28px;flex-shrink:0;line-height:1;}  
+.banner-heading{  
+  font-family:var(--font-display);font-size:17px;font-weight:700;  
+  color:#fbbf24;margin-bottom:4px;  
+}  
+.banner-sub{font-size:13px;color:var(--text-1);line-height:1.5;}  
+.banner-dismiss{  
+  background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);  
+  color:#fbbf24;border-radius:var(--radius-sm);font-size:11px;  
+  padding:4px 10px;cursor:pointer;flex-shrink:0;font-family:var(--font-mono);  
+  transition:all var(--transition);white-space:nowrap;  
+}  
+.banner-dismiss:hover{background:rgba(245,158,11,.25);}  
+.banner-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:2px;}  
+.banner-step{  
+  background:rgba(0,0,0,.25);border:1px solid rgba(245,158,11,.2);  
+  border-radius:var(--radius-md);padding:12px 14px;  
+  display:flex;align-items:flex-start;gap:10px;  
+}  
+.step-num{  
+  font-family:var(--font-mono);font-size:11px;font-weight:500;  
+  color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);  
+  border-radius:var(--radius-full);min-width:22px;height:22px;  
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;  
+}  
+.step-text{font-size:12px;color:var(--text-1);line-height:1.5;}  
+.step-text strong{color:var(--text-0);}  
+  
+/* CORS WARNING BANNER */  
+#corsBanner{  
+  background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(6,182,212,.06));  
+  border:1.5px solid rgba(139,92,246,.4);  
+  border-radius:var(--radius-lg);  
+  padding:14px 18px;  
+  margin-bottom:16px;  
+  display:flex;gap:12px;align-items:flex-start;  
+}  
+#corsBanner.hidden{display:none!important;}  
+.cors-icon{font-size:20px;flex-shrink:0;}  
+.cors-content{flex:1;}  
+.cors-title{font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:6px;font-family:var(--font-display);}  
+.cors-body{font-size:12px;color:var(--text-1);line-height:1.6;}  
+.cors-body code{  
+  font-family:var(--font-mono);font-size:11px;  
+  background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.25);  
+  padding:1px 6px;border-radius:4px;color:#c4b5fd;  
+}  
+.cors-options{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}  
+.cors-opt-btn{  
+  font-size:11px;padding:5px 11px;border-radius:var(--radius-sm);cursor:pointer;  
+  font-family:var(--font-mono);border:1px solid rgba(139,92,246,.4);  
+  background:rgba(139,92,246,.12);color:#a78bfa;  
+  transition:all var(--transition);  
+}  
+.cors-opt-btn:hover{background:rgba(139,92,246,.25);}  
+.cors-opt-btn.active{background:rgba(139,92,246,.3);border-color:#8b5cf6;color:#fff;}  
+  
+/* ============================================================  
+   HEADER  
+   ============================================================ */  
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}  
+.logo{display:flex;align-items:center;gap:10px;}  
+.logo-mark{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}  
+.logo-text{font-family:var(--font-display);font-size:20px;font-weight:700;letter-spacing:-.5px;background:linear-gradient(135deg,var(--text-0),var(--text-1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}  
+.header-actions{display:flex;gap:8px;align-items:center;}  
+  
+/* ============================================================  
+   BUTTONS  
+   ============================================================ */  
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--border);background:var(--bg-3);color:var(--text-1);border-radius:var(--radius-md);font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:all var(--transition);white-space:nowrap;}  
+.btn:hover{border-color:var(--border-active);color:var(--text-0);background:var(--bg-4);}  
+.btn-icon{padding:8px;width:36px;height:36px;border-radius:var(--radius-md);font-size:15px;}  
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-dim));border-color:transparent;color:#fff;}  
+.btn-primary:hover{filter:brightness(1.1);background:linear-gradient(135deg,var(--accent),var(--accent-dim));}  
+.btn-danger{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--error);}  
+.btn-danger:hover{background:rgba(239,68,68,.2);}  
+.btn-warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#fbbf24;}  
+.btn-warn:hover{background:rgba(245,158,11,.22);}  
+  
+/* ============================================================  
+   MODE SWITCHER  
+   ============================================================ */  
+.mode-switcher{display:flex;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:4px;margin-bottom:20px;gap:4px;}  
+.mode-btn{flex:1;padding:10px 12px;border:1px solid transparent;background:transparent;color:var(--text-2);border-radius:var(--radius-md);font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:all var(--transition);display:flex;align-items:center;justify-content:center;gap:6px;}  
+.mode-btn.active{background:var(--bg-4);border-color:var(--border-active);color:var(--text-0);box-shadow:0 1px 4px rgba(0,0,0,.3);}  
+.mode-badge{font-size:10px;padding:1px 6px;border-radius:var(--radius-full);background:var(--accent);color:#fff;font-family:var(--font-mono);font-weight:400;}  
+  
+/* ============================================================  
+   PROXY MODE INDICATOR  
+   ============================================================ */  
+#proxyIndicator{  
+  display:flex;align-items:center;gap:8px;  
+  font-size:11px;font-family:var(--font-mono);  
+  color:var(--text-3);margin-bottom:16px;  
+  padding:8px 14px;  
+  background:var(--bg-2);border:1px solid var(--border);  
+  border-radius:var(--radius-md);  
+}  
+#proxyIndicator.active{color:#a78bfa;border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.05);}  
+#proxyIndicator .pi-dot{width:6px;height:6px;border-radius:50%;background:var(--text-3);flex-shrink:0;}  
+#proxyIndicator.active .pi-dot{background:#8b5cf6;box-shadow:0 0 6px #8b5cf6;}  
+#proxyIndicator .pi-change{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;}  
+#proxyIndicator .pi-change:hover{color:var(--text-0);}  
+  
+/* ============================================================  
+   LANGUAGE ROW  
+   ============================================================ */  
+.lang-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;}  
+.lang-select-wrap{flex:1;position:relative;}  
+.lang-select-wrap select{width:100%;appearance:none;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);border-radius:var(--radius-md);padding:10px 36px 10px 14px;font-family:var(--font-body);font-size:14px;cursor:pointer;transition:border-color var(--transition);}  
+.lang-select-wrap select:focus{outline:none;border-color:var(--border-active);}  
+.lang-select-wrap::after{content:'↕';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-2);pointer-events:none;}  
+.swap-btn{width:40px;height:40px;flex-shrink:0;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all var(--transition);color:var(--text-2);}  
+.swap-btn:hover{border-color:var(--border-active);color:var(--text-0);transform:rotate(180deg);}  
+  
+/* ============================================================  
+   TRANSLATION CARDS  
+   ============================================================ */  
+.cards-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}  
+@media(max-width:600px){.cards-row{grid-template-columns:1fr;}}  
+.trans-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;min-height:160px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:border-color var(--transition);}  
+.trans-card.active{border-color:var(--border-active);}  
+.trans-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent-glow),transparent);opacity:0;transition:opacity var(--transition);}  
+.trans-card.active::before{opacity:1;}  
+.card-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;font-family:var(--font-mono);display:flex;align-items:center;gap:6px;}  
+.card-label .lang-tag{padding:1px 7px;background:var(--bg-4);border-radius:var(--radius-full);color:var(--text-2);font-size:10px;}  
+.card-text{flex:1;font-size:15px;line-height:1.7;color:var(--text-0);min-height:80px;}  
+.card-text.placeholder{color:var(--text-3);font-style:italic;}  
+.card-text.interim{color:var(--text-2);}  
+.card-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:10px;}  
+.card-action-btn{width:30px;height:30px;border:1px solid var(--border);background:var(--bg-3);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;color:var(--text-2);transition:all var(--transition);}  
+.card-action-btn:hover{border-color:var(--border-active);color:var(--text-0);}  
+.waveform{display:flex;align-items:center;justify-content:center;gap:3px;height:40px;}  
+.wave-bar{width:3px;border-radius:2px;background:var(--accent);animation:wave .8s ease-in-out infinite;}  
+.wave-bar:nth-child(1){animation-delay:0s;height:8px;} .wave-bar:nth-child(2){animation-delay:.1s;height:16px;} .wave-bar:nth-child(3){animation-delay:.2s;height:24px;} .wave-bar:nth-child(4){animation-delay:.3s;height:32px;} .wave-bar:nth-child(5){animation-delay:.4s;height:24px;} .wave-bar:nth-child(6){animation-delay:.5s;height:16px;} .wave-bar:nth-child(7){animation-delay:.6s;height:8px;}  
+@keyframes wave{0%,100%{transform:scaleY(1);opacity:.5;}50%{transform:scaleY(2.2);opacity:1;}}  
+  
+/* ============================================================  
+   MIC BUTTON  
+   ============================================================ */  
+.mic-section{display:flex;flex-direction:column;align-items:center;margin-bottom:24px;gap:16px;}  
+.mic-wrap{position:relative;display:flex;align-items:center;justify-content:center;}  
+.mic-ring{position:absolute;border-radius:50%;border:2px solid var(--accent);opacity:0;animation:none;}  
+.mic-ring-1{width:104px;height:104px;} .mic-ring-2{width:128px;height:128px;animation-delay:.3s;} .mic-ring-3{width:156px;height:156px;animation-delay:.6s;}  
+@keyframes ripple{0%{transform:scale(.8);opacity:.6;}100%{transform:scale(1.4);opacity:0;}}  
+.listening .mic-ring{animation:ripple 1.8s ease-out infinite;}  
+.mic-btn{width:88px;height:88px;border-radius:50%;border:2px solid var(--border);background:var(--bg-3);color:var(--text-0);font-size:32px;cursor:pointer;position:relative;z-index:1;transition:all var(--transition-slow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-card);}  
+.mic-btn:hover{border-color:var(--border-active);box-shadow:var(--shadow-glow);}  
+.mic-btn.listening{background:linear-gradient(135deg,var(--accent),var(--accent-dim));border-color:transparent;}  
+.mic-btn.processing{background:linear-gradient(135deg,var(--accent3),#6d28d9);border-color:transparent;}  
+.mic-btn.speaking{background:linear-gradient(135deg,var(--success),#059669);border-color:transparent;}  
+.mic-btn.push-to-talk{background:linear-gradient(135deg,var(--warn),#d97706);border-color:transparent;}  
+/* Push hint below mic in push mode */  
+.push-hint{  
+  font-size:13px;color:#fbbf24;font-weight:600;  
+  background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);  
+  border-radius:var(--radius-full);padding:6px 18px;  
+  animation:pushHintPulse 2s ease-in-out infinite;  
+  display:none;letter-spacing:.01em;  
+}  
+.push-hint.visible{display:block;}  
+@keyframes pushHintPulse{  
+  0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0);color:#fbbf24;}  
+  50%{box-shadow:0 0 0 6px rgba(245,158,11,.08);color:#f59e0b;}  
+}  
+.mic-status{font-family:var(--font-mono);font-size:12px;color:var(--text-2);letter-spacing:.05em;display:flex;align-items:center;gap:6px;}  
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text-3);transition:background var(--transition);}  
+.status-dot.active{background:var(--accent);box-shadow:0 0 6px var(--accent);}  
+.status-dot.processing{background:var(--accent3);box-shadow:0 0 6px var(--accent3);}  
+.status-dot.speaking{background:var(--success);box-shadow:0 0 6px var(--success);}  
+.status-dot.warn{background:var(--warn);box-shadow:0 0 6px var(--warn);}  
+  
+/* ============================================================  
+   HISTORY  
+   ============================================================ */  
+.history-section{margin-top:8px;}  
+.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:pointer;user-select:none;}  
+.history-title{font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text-2);display:flex;align-items:center;gap:8px;}  
+.history-count{background:var(--bg-4);border:1px solid var(--border);border-radius:var(--radius-full);font-size:11px;font-family:var(--font-mono);color:var(--text-2);padding:1px 8px;}  
+.history-toggle{color:var(--text-3);transition:transform var(--transition);}  
+.history-toggle.open{transform:rotate(90deg);}  
+.history-list{display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto;padding-right:4px;transition:max-height .4s cubic-bezier(.4,0,.2,1);}  
+.history-list.collapsed{max-height:0;overflow:hidden;}  
+.history-item{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;transition:border-color var(--transition);}  
+.history-item:hover{border-color:var(--border-active);}  
+.history-item-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}  
+.history-item-src{font-size:13px;color:var(--text-2);margin-bottom:6px;line-height:1.5;}  
+.history-item-tgt{font-size:14px;color:var(--text-0);line-height:1.6;border-left:2px solid var(--accent);padding-left:10px;}  
+.history-item-actions{display:flex;gap:4px;margin-top:8px;justify-content:flex-end;}  
+.empty-state{text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px;}  
+.empty-state .empty-icon{font-size:32px;margin-bottom:10px;opacity:.5;}  
+  
+/* ============================================================  
+   SETTINGS DRAWER  
+   ============================================================ */  
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:100;opacity:0;pointer-events:none;transition:opacity var(--transition-slow);}  
+.overlay.open{opacity:1;pointer-events:all;}  
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(500px,100vw);background:var(--bg-1);border-left:1px solid var(--border);z-index:101;overflow-y:auto;transform:translateX(100%);transition:transform var(--transition-slow);padding:24px;}  
+.drawer.open{transform:translateX(0);}  
+.drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}  
+.drawer-title{font-family:var(--font-display);font-size:20px;font-weight:700;}  
+.section-title{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);}  
+.settings-section{margin-bottom:28px;}  
+.field-group{margin-bottom:14px;}  
+.field-label{display:block;font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:6px;}  
+.field-input{width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text-0);padding:9px 12px;font-family:var(--font-mono);font-size:12px;transition:border-color var(--transition);}  
+.field-input:focus{outline:none;border-color:var(--border-active);}  
+.field-input::placeholder{color:var(--text-3);}  
+.field-select{width:100%;appearance:none;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text-0);padding:9px 34px 9px 12px;font-family:var(--font-body);font-size:13px;cursor:pointer;transition:border-color var(--transition);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a536b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}  
+.field-select:focus{outline:none;border-color:var(--border-active);}  
+.field-select option{background:var(--bg-3);}  
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;}  
+.toggle-label{font-size:13px;color:var(--text-1);}  
+.toggle-sublabel{font-size:11px;color:var(--text-3);margin-top:2px;}  
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0;}  
+.toggle input{opacity:0;width:0;height:0;}  
+.toggle-track{position:absolute;inset:0;background:var(--bg-5);border-radius:var(--radius-full);cursor:pointer;transition:background var(--transition);}  
+.toggle-track::after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:var(--text-2);border-radius:50%;transition:all var(--transition);}  
+.toggle input:checked+.toggle-track{background:var(--accent);}  
+.toggle input:checked+.toggle-track::after{transform:translateX(18px);background:#fff;}  
+.settings-actions{display:flex;gap:8px;margin-top:24px;}  
+/* API key required highlight */  
+.field-input.required-empty{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.04);}  
+.required-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#fbbf24;font-family:var(--font-mono);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:var(--radius-full);padding:1px 7px;margin-left:6px;}  
+  
+/* ============================================================  
+   TOAST  
+   ============================================================ */  
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}  
+.toast{background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 16px;max-width:340px;font-size:13px;color:var(--text-1);display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow-card);animation:toast-in .3s ease-out;pointer-events:all;}  
+.toast.error{border-color:rgba(239,68,68,.4);}  
+.toast.success{border-color:rgba(16,185,129,.4);}  
+.toast.warn{border-color:rgba(245,158,11,.4);}  
+.toast-icon{font-size:15px;flex-shrink:0;margin-top:1px;}  
+@keyframes toast-in{from{transform:translateX(60px);opacity:0;}to{transform:translateX(0);opacity:1;}}  
+  
+/* ============================================================  
+   MISC  
+   ============================================================ */  
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}  
+@keyframes spin{to{transform:rotate(360deg);}}  
+.hidden{display:none!important;}  
+.divider{height:1px;background:var(--border);margin:16px 0;}  
+.info-box{background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:var(--radius-md);padding:10px 14px;font-size:12px;color:var(--text-1);line-height:1.6;margin-bottom:12px;}  
+.info-box code{font-family:var(--font-mono);color:var(--accent2);font-size:11px;}  
+</style>  
+</head>  
+<body>  
+<div id="app">  
+  
+  <!-- HEADER -->  
+  <header class="header">  
+    <div class="logo">  
+      <div class="logo-mark">🌐</div>  
+      <span class="logo-text">VoiceFlow</span>  
+    </div>  
+    <div class="header-actions">  
+      <button class="btn btn-warn" id="settingsBtn" style="font-weight:600">⚙️ 配置 API Key</button>  
+    </div>  
+  </header>  
+  
+  <!-- SETUP BANNER (shown until keys are configured) -->  
+  <div id="setupBanner">  
+    <div class="banner-top">  
+      <span class="banner-icon">🔑</span>  
+      <div style="flex:1">  
+        <div class="banner-heading">⚡ 首次使用？先配置 API Key</div>  
+        <div class="banner-sub">本应用完全在浏览器本地运行，所有 API 请求由您的浏览器直接发出。填写密钥后即可开始翻译。</div>  
+      </div>  
+      <button class="banner-dismiss" id="bannerDismiss">不再提示</button>  
+    </div>  
+    <div class="banner-steps">  
+      <div class="banner-step">  
+        <span class="step-num">1</span>  
+        <div class="step-text">点击右上角 <strong>⚙️ 配置 API Key</strong> 按钮打开设置</div>  
+      </div>  
+      <div class="banner-step">  
+        <span class="step-num">2</span>  
+        <div class="step-text">在「翻译 API」填入 <strong>OpenRouter / DeepSeek</strong> 的 API Key</div>  
+      </div>  
+      <div class="banner-step">  
+        <span class="step-num">3</span>  
+        <div class="step-text">保存设置后点击 <strong>🎙️ 麦克风</strong> 开始实时翻译</div>  
+      </div>  
+      <div class="banner-step">  
+        <span class="step-num">4</span>  
+        <div class="step-text">若遇到 CORS 错误，查看下方<strong>代理设置</strong>绕过限制</div>  
+      </div>  
+    </div>  
+  </div>  
+  
+  <!-- CORS / NETWORK BANNER -->  
+  <div id="corsBanner">  
+    <span class="cors-icon">🔒</span>  
+    <div class="cors-content">  
+      <div class="cors-title">浏览器跨域（CORS）与防火墙说明</div>  
+      <div class="cors-body">  
+        静态网页直接调用第三方 API 时，浏览器同源策略可能阻止请求（报 CORS 错误），企业防火墙也可能拦截。  
+        选择以下方案绕开：  
+      </div>  
+      <div class="cors-options">  
+        <button class="cors-opt-btn active" id="corsOptDirect" onclick="setCorsMode('direct')">🌐 直连（默认）</button>  
+        <button class="cors-opt-btn" id="corsOptProxy" onclick="setCorsMode('proxy')">🔀 本地代理</button>  
+        <button class="cors-opt-btn" id="corsOptCorsAnywhere" onclick="setCorsMode('corsproxy')">☁️ cors-anywhere</button>  
+      </div>  
+      <div id="corsProxyDetail" class="hidden" style="margin-top:10px;font-size:11px;color:var(--text-2);line-height:1.7;">  
+        🖥️ 本地代理模式：在终端运行<br>  
+        <code>npx local-cors-proxy --proxyUrl https://openrouter.ai --port 8010</code><br>  
+        然后将各 API 的 Base URL 改为 <code>http://localhost:8010/proxy</code>。  
+      </div>  
+      <div id="corsAnywhereDetail" class="hidden" style="margin-top:10px;font-size:11px;color:var(--text-2);line-height:1.7;">  
+        ☁️ cors-anywhere 模式：请求自动加前缀 <code>https://cors-anywhere.herokuapp.com/</code>，公共服务，不适用于生产环境，API Key 会经过第三方，仅供测试。  
+      </div>  
+    </div>  
+  </div>  
+  
+  <!-- PROXY INDICATOR -->  
+  <div id="proxyIndicator">  
+    <div class="pi-dot"></div>  
+    <span id="piText">请求模式：直连</span>  
+    <span class="pi-change" onclick="document.getElementById('corsBanner').classList.toggle('hidden')">更改 ▾</span>  
+  </div>  
+  
+  <!-- MODE SWITCHER -->  
+  <div class="mode-switcher">  
+    <button class="mode-btn active" data-mode="pipeline" id="modeA">🔗 标准流水线<span class="mode-badge">STT→AI→TTS</span></button>  
+    <button class="mode-btn" data-mode="multimodal" id="modeB">⚡ 多模态合并<span class="mode-badge">音频→AI</span></button>  
+  </div>  
+  
+  <!-- LANGUAGE SELECTOR -->  
+  <div class="lang-row">  
+    <div class="lang-select-wrap">  
+      <select id="srcLang">  
+        <option value="auto">🔍 自动检测</option>  
+        <option value="zh-CN">🇨🇳 中文（普通话）</option>  
+        <option value="en-US" selected>🇺🇸 English (US)</option>  
+        <option value="en-GB">🇬🇧 English (UK)</option>  
+        <option value="ja-JP">🇯🇵 日本語</option>  
+        <option value="ko-KR">🇰🇷 한국어</option>  
+        <option value="fr-FR">🇫🇷 Français</option>  
+        <option value="de-DE">🇩🇪 Deutsch</option>  
+        <option value="es-ES">🇪🇸 Español</option>  
+        <option value="pt-BR">🇧🇷 Português</option>  
+        <option value="ru-RU">🇷🇺 Русский</option>  
+        <option value="ar-SA">🇸🇦 العربية</option>  
+        <option value="hi-IN">🇮🇳 हिन्दी</option>  
+        <option value="th-TH">🇹🇭 ภาษาไทย</option>  
+        <option value="vi-VN">🇻🇳 Tiếng Việt</option>  
+        <option value="it-IT">🇮🇹 Italiano</option>  
+      </select>  
+    </div>  
+    <button class="swap-btn" id="swapLang" title="交换语言">⇄</button>  
+    <div class="lang-select-wrap">  
+      <select id="tgtLang">  
+        <option value="zh-CN" selected>🇨🇳 中文（普通话）</option>  
+        <option value="en-US">🇺🇸 English (US)</option>  
+        <option value="en-GB">🇬🇧 English (UK)</option>  
+        <option value="ja-JP">🇯🇵 日本語</option>  
+        <option value="ko-KR">🇰🇷 한국어</option>  
+        <option value="fr-FR">🇫🇷 Français</option>  
+        <option value="de-DE">🇩🇪 Deutsch</option>  
+        <option value="es-ES">🇪🇸 Español</option>  
+        <option value="pt-BR">🇧🇷 Português</option>  
+        <option value="ru-RU">🇷🇺 Русский</option>  
+        <option value="ar-SA">🇸🇦 العربية</option>  
+        <option value="hi-IN">🇮🇳 हिन्दी</option>  
+        <option value="th-TH">🇹🇭 ภาษาไทย</option>  
+        <option value="vi-VN">🇻🇳 Tiếng Việt</option>  
+        <option value="it-IT">🇮🇹 Italiano</option>  
+      </select>  
+    </div>  
+  </div>  
+  
+  <!-- TRANSLATION CARDS -->  
+  <div class="cards-row">  
+    <div class="trans-card" id="srcCard">  
+      <div class="card-label">原文 <span class="lang-tag" id="srcLangTag">EN</span></div>  
+      <div class="card-text placeholder" id="srcText">点击下方麦克风开始说话…</div>  
+      <div class="card-actions">  
+        <button class="card-action-btn" id="copySrc" title="复制原文">📋</button>  
+      </div>  
+    </div>  
+    <div class="trans-card" id="tgtCard">  
+      <div class="card-label">译文 <span class="lang-tag" id="tgtLangTag">ZH</span></div>  
+      <div class="card-text placeholder" id="tgtText">翻译将在此处显示…</div>  
+      <div class="card-actions">  
+        <button class="card-action-btn" id="ttsPlayBtn" title="朗读译文" style="display:none">🔊</button>  
+        <button class="card-action-btn" id="copyTgt" title="复制译文">📋</button>  
+      </div>  
+    </div>  
+  </div>  
+  
+  <!-- MIC BUTTON -->  
+  <div class="mic-section">  
+    <div class="mic-wrap" id="micWrap">  
+      <div class="mic-ring mic-ring-1"></div>  
+      <div class="mic-ring mic-ring-2"></div>  
+      <div class="mic-ring mic-ring-3"></div>  
+      <button class="mic-btn" id="micBtn">🎙️</button>  
+    </div>  
+    <!-- Push-to-talk hint — prominent, animated -->  
+    <div class="push-hint" id="pushHint">⬆ 按住说话，松开翻译</div>  
+    <div class="mic-status">  
+      <span class="status-dot" id="statusDot"></span>  
+      <span id="statusText">就绪 — 先配置 API Key</span>  
+    </div>  
+  </div>  
+  
+  <!-- HISTORY -->  
+  <section class="history-section">  
+    <div class="history-header" id="historyHeader">  
+      <div class="history-title">📜 翻译历史 <span class="history-count" id="historyCount">0</span></div>  
+      <div class="header-actions" style="gap:6px">  
+        <button class="btn btn-danger" id="clearHistoryBtn" style="padding:5px 10px;font-size:12px">🗑 清除</button>  
+        <span class="history-toggle open" id="historyToggle">▶</span>  
+      </div>  
+    </div>  
+    <div class="history-list" id="historyList">  
+      <div class="empty-state" id="historyEmpty"><div class="empty-icon">🌐</div><p>暂无翻译记录</p></div>  
+    </div>  
+  </section>  
+</div><!-- #app -->  
+  
+<!-- TOASTS -->  
+<div class="toast-container" id="toastContainer"></div>  
+  
+<!-- OVERLAY + DRAWER -->  
+<div class="overlay" id="overlay"></div>  
+<div class="drawer" id="drawer">  
+  <div class="drawer-header">  
+    <span class="drawer-title">⚙️ 设置</span>  
+    <button class="btn btn-icon" id="closeDrawer">✕</button>  
+  </div>  
+  
+  <!-- GENERAL -->  
+  <div class="settings-section">  
+    <div class="section-title">🔧 通用</div>  
+    <div class="toggle-row">  
+      <div><div class="toggle-label">连续识别模式</div><div class="toggle-sublabel">自动检测停顿并翻译（浏览器 STT）</div></div>  
+      <label class="toggle"><input type="checkbox" id="autoTranslate" checked><span class="toggle-track"></span></label>  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">携带上下文条数</label>  
+      <input type="number" class="field-input" id="contextLimit" value="6" min="1" max="20" style="width:80px">  
+    </div>  
+  </div>  
+  
+  <!-- STT -->  
+  <div class="settings-section">  
+    <div class="section-title">🎤 语音识别（STT）</div>  
+    <div class="field-group">  
+      <label class="field-label">STT 引擎</label>  
+      <select class="field-select" id="sttEngine">  
+        <option value="browser">浏览器 Web Speech API（免费，推荐）</option>  
+        <option value="remote">远程 Whisper API（按住说话）</option>  
+      </select>  
+    </div>  
+    <div id="sttRemoteConfig" class="hidden">  
+      <div class="info-box">远程 STT 使用 OpenAI Whisper 兼容端点（<code>/audio/transcriptions</code>）。录音完成后发送。</div>  
+      <div class="field-group">  
+        <label class="field-label">STT 服务商</label>  
+        <select class="field-select" id="sttProvider">  
+          <option value="openrouter">OpenRouter Whisper</option>  
+          <option value="custom">自定义端点</option>  
+        </select>  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">STT API Key <span class="required-badge">⚠ 必填</span></label>  
+        <input type="password" class="field-input" id="sttApiKey" placeholder="sk-or-v1-...">  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">STT Base URL</label>  
+        <input type="text" class="field-input" id="sttBaseUrl" placeholder="https://openrouter.ai/api/v1">  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">STT Model</label>  
+        <input type="text" class="field-input" id="sttModel" placeholder="openai/whisper-large-v3">  
+      </div>  
+    </div>  
+  </div>  
+  
+  <!-- TRANSLATION -->  
+  <div class="settings-section">  
+    <div class="section-title">🌐 翻译 API <span class="required-badge">核心配置</span></div>  
+    <div class="info-box">  
+      请在下方填写翻译服务的 API Key，这是应用的核心配置。<br>  
+      推荐：<strong>OpenRouter</strong>（支持众多模型）或 <strong>DeepSeek</strong>（性价比高）。  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">翻译服务商</label>  
+      <select class="field-select" id="transProvider">  
+        <option value="openrouter">OpenRouter</option>  
+        <option value="deepseek">DeepSeek</option>  
+        <option value="custom">自定义（OpenAI 兼容）</option>  
+      </select>  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">API Key <span class="required-badge">⚠ 必填</span></label>  
+      <input type="password" class="field-input" id="transApiKey" placeholder="sk-or-v1-... 或 sk-...">  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">Base URL</label>  
+      <input type="text" class="field-input" id="transBaseUrl" placeholder="https://openrouter.ai/api/v1">  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">Model</label>  
+      <input type="text" class="field-input" id="transModel" placeholder="openai/gpt-4o">  
+    </div>  
+  </div>  
+  
+  <!-- TTS -->  
+  <div class="settings-section">  
+    <div class="section-title">🔊 文字转语音（TTS）</div>  
+    <div class="toggle-row">  
+      <div><div class="toggle-label">启用 TTS 朗读</div><div class="toggle-sublabel">翻译完成后朗读译文</div></div>  
+      <label class="toggle"><input type="checkbox" id="ttsEnabled"><span class="toggle-track"></span></label>  
+    </div>  
+    <div class="toggle-row">  
+      <div><div class="toggle-label">自动朗读</div><div class="toggle-sublabel">否则点击 🔊 按钮手动播放</div></div>  
+      <label class="toggle"><input type="checkbox" id="ttsAuto" checked><span class="toggle-track"></span></label>  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">TTS 引擎</label>  
+      <select class="field-select" id="ttsEngine">  
+        <option value="browser">浏览器 Speech Synthesis（免费）</option>  
+        <option value="remote">远程 TTS API</option>  
+      </select>  
+    </div>  
+    <div id="ttsRemoteConfig" class="hidden">  
+      <div class="field-group">  
+        <label class="field-label">TTS 服务商</label>  
+        <select class="field-select" id="ttsProvider">  
+          <option value="openrouter">OpenRouter TTS</option>  
+          <option value="custom">自定义端点</option>  
+        </select>  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">TTS API Key <span class="required-badge">⚠ 必填</span></label>  
+        <input type="password" class="field-input" id="ttsApiKey" placeholder="sk-...">  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">TTS Base URL</label>  
+        <input type="text" class="field-input" id="ttsBaseUrl" placeholder="https://openrouter.ai/api/v1">  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">TTS Model</label>  
+        <input type="text" class="field-input" id="ttsModel" placeholder="tts-1">  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">语音 Voice</label>  
+        <input type="text" class="field-input" id="ttsVoice" placeholder="alloy">  
+      </div>  
+      <div class="field-group">  
+        <label class="field-label">速度 Speed (0.25–4.0)</label>  
+        <input type="number" class="field-input" id="ttsSpeed" value="1.0" min="0.25" max="4.0" step="0.05" style="width:90px">  
+      </div>  
+    </div>  
+  </div>  
+  
+  <!-- MULTIMODAL -->  
+  <div class="settings-section">  
+    <div class="section-title">⚡ 多模态模型</div>  
+    <div class="info-box">仅在「多模态合并模式」下使用。需要支持音频输入的模型（如 <code>openai/gpt-4o-audio-preview</code>）。</div>  
+    <div class="field-group">  
+      <label class="field-label">多模态服务商</label>  
+      <select class="field-select" id="mmProvider">  
+        <option value="openrouter">OpenRouter（多模态）</option>  
+        <option value="deepseek">DeepSeek（若支持）</option>  
+        <option value="custom">自定义端点</option>  
+      </select>  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">API Key <span class="required-badge">⚠ 必填</span></label>  
+      <input type="password" class="field-input" id="mmApiKey" placeholder="sk-or-v1-...">  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">Base URL</label>  
+      <input type="text" class="field-input" id="mmBaseUrl" placeholder="https://openrouter.ai/api/v1">  
+    </div>  
+    <div class="field-group">  
+      <label class="field-label">Model</label>  
+      <input type="text" class="field-input" id="mmModel" placeholder="openai/gpt-4o-audio-preview">  
+    </div>  
+  </div>  
+  
+  <div class="settings-actions">  
+    <button class="btn btn-primary" id="saveSettings">💾 保存设置</button>  
+    <button class="btn btn-danger" id="resetSettings">↺ 恢复默认</button>  
+  </div>  
+</div>  
+  
+<script>  
+/* ============================================================  
+   VOICEFLOW — 实时语音翻译  
+   策略：通过可配置的请求代理模式绕过 CORS / 防火墙  
+   ============================================================ */  
+  
+// ============================================================  
+// 默认配置  
+// ============================================================  
+const DEFAULTS = {  
+  mode:'pipeline', srcLang:'en-US', tgtLang:'zh-CN', autoTranslate:true, contextLimit:6,  
+  sttEngine:'browser', sttProvider:'openrouter', sttApiKey:'',  
+  sttBaseUrl:'https://openrouter.ai/api/v1', sttModel:'openai/whisper-large-v3',  
+  transProvider:'openrouter', transApiKey:'',  
+  transBaseUrl:'https://openrouter.ai/api/v1', transModel:'openai/gpt-4o',  
+  ttsEnabled:false, ttsAuto:true, ttsEngine:'browser', ttsProvider:'openrouter', ttsApiKey:'',  
+  ttsBaseUrl:'https://openrouter.ai/api/v1', ttsModel:'tts-1', ttsVoice:'alloy', ttsSpeed:1.0,  
+  mmProvider:'openrouter', mmApiKey:'',  
+  mmBaseUrl:'https://openrouter.ai/api/v1', mmModel:'openai/gpt-4o-audio-preview',  
+  corsMode:'direct',    // 'direct' | 'proxy' | 'corsproxy'  
+  bannerDismissed:false,  
+};  
+  
+const PROVIDER_PRESETS = {  
+  trans:{  
+    openrouter:{baseUrl:'https://openrouter.ai/api/v1',model:'openai/gpt-4o'},  
+    deepseek:{baseUrl:'https://api.deepseek.com',model:'deepseek-chat'},  
+    custom:{baseUrl:'',model:''},  
+  },  
+  stt:{  
+    openrouter:{baseUrl:'https://openrouter.ai/api/v1',model:'openai/whisper-large-v3'},  
+    custom:{baseUrl:'',model:''},  
+  },  
+  tts:{  
+    openrouter:{baseUrl:'https://openrouter.ai/api/v1',model:'tts-1',voice:'alloy'},  
+    custom:{baseUrl:'',model:'',voice:''},  
+  },  
+  mm:{  
+    openrouter:{baseUrl:'https://openrouter.ai/api/v1',model:'openai/gpt-4o-audio-preview'},  
+    deepseek:{baseUrl:'https://api.deepseek.com',model:'deepseek-chat'},  
+    custom:{baseUrl:'',model:''},  
+  },  
+};  
+  
+// ============================================================  
+// STATE  
+// ============================================================  
+let cfg = {};  
+let history = [];  
+let isListening = false;  
+let isProcessing = false;  
+let mediaRecorder = null;  
+let audioChunks = [];  
+let recognition = null;  
+let currentMode = 'pipeline';  
+let ttsAudio = null;  
+let pushRecording = false;  
+  
+// ============================================================  
+// CORS / PROXY MODE  
+// ============================================================  
+// corsMode:  
+//   'direct'     → fetch URL as-is  
+//   'proxy'      → prepend http://localhost:8010/proxy/ (local-cors-proxy)  
+//   'corsproxy'  → prepend https://cors-anywhere.herokuapp.com/  
+const CORS_ANYWHERE = 'https://cors-anywhere.herokuapp.com/';  
+const LOCAL_PROXY   = 'http://localhost:8010/proxy/';  
+  
+function proxyUrl(url) {  
+  if (cfg.corsMode === 'proxy')      return LOCAL_PROXY + url;  
+  if (cfg.corsMode === 'corsproxy')  return CORS_ANYWHERE + url;  
+  return url; // direct  
+}  
+  
+// Fetch wrapper that applies proxy and common error handling  
+async function apiFetch(url, opts={}) {  
+  const target = proxyUrl(url);  
+  // Add CORS-anywhere required header when using that service  
+  if (cfg.corsMode === 'corsproxy') {  
+    opts.headers = opts.headers || {};  
+    opts.headers['X-Requested-With'] = 'XMLHttpRequest';  
+  }  
+  try {  
+    const res = await fetch(target, opts);  
+    return res;  
+  } catch(err) {  
+    // Try to give a helpful message  
+    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {  
+      const hint = cfg.corsMode === 'direct'  
+        ? '直连失败。可能是 CORS 或防火墙阻断。请尝试切换为「代理模式」（点击页面上的代理设置）。'  
+        : cfg.corsMode === 'proxy'  
+        ? '本地代理连接失败。请确认已运行 local-cors-proxy（见代理说明）。'  
+        : 'cors-anywhere 连接失败。该公共服务可能需要先访问 https://cors-anywhere.herokuapp.com/corsdemo 激活。';  
+      throw new Error(hint);  
+    }  
+    throw err;  
+  }  
+}  
+  
+window.setCorsMode = function(mode) {  
+  cfg.corsMode = mode;  
+  saveConfig();  
+  ['direct','proxy','corsproxy'].forEach(m => {  
+    const el = document.getElementById('corsOpt' + {direct:'Direct',proxy:'Proxy',corsproxy:'CorsAnywhere'}[m]);  
+    if(el) el.classList.toggle('active', m === mode);  
+  });  
+  document.getElementById('corsProxyDetail').classList.toggle('hidden', mode !== 'proxy');  
+  document.getElementById('corsAnywhereDetail').classList.toggle('hidden', mode !== 'corsproxy');  
+  const pi = document.getElementById('proxyIndicator');  
+  const piText = document.getElementById('piText');  
+  const labels = {direct:'请求模式：直连',proxy:'请求模式：本地代理 (localhost:8010)',corsproxy:'请求模式：cors-anywhere 公共代理'};  
+  piText.textContent = labels[mode] || labels.direct;  
+  pi.classList.toggle('active', mode !== 'direct');  
+  toast({direct:'切换为直连模式',proxy:'切换为本地代理模式，请运行 local-cors-proxy',corsproxy:'切换为 cors-anywhere 模式（仅测试用）'}[mode],'info');  
+};  
+  
+// ============================================================  
+// DOM REFS  
+// ============================================================  
+const $ = id => document.getElementById(id);  
+const dom = {  
+  modeA:$('modeA'),modeB:$('modeB'),  
+  srcLang:$('srcLang'),tgtLang:$('tgtLang'),swapLang:$('swapLang'),  
+  srcCard:$('srcCard'),tgtCard:$('tgtCard'),  
+  srcText:$('srcText'),tgtText:$('tgtText'),  
+  srcLangTag:$('srcLangTag'),tgtLangTag:$('tgtLangTag'),  
+  copySrc:$('copySrc'),copyTgt:$('copyTgt'),ttsPlayBtn:$('ttsPlayBtn'),  
+  micBtn:$('micBtn'),micWrap:$('micWrap'),  
+  statusDot:$('statusDot'),statusText:$('statusText'),  
+  pushHint:$('pushHint'),  
+  historyList:$('historyList'),historyCount:$('historyCount'),  
+  historyEmpty:$('historyEmpty'),clearHistoryBtn:$('clearHistoryBtn'),  
+  historyHeader:$('historyHeader'),historyToggle:$('historyToggle'),  
+  settingsBtn:$('settingsBtn'),closeDrawer:$('closeDrawer'),  
+  overlay:$('overlay'),drawer:$('drawer'),  
+  saveSettings:$('saveSettings'),resetSettings:$('resetSettings'),  
+  toastContainer:$('toastContainer'),  
+  setupBanner:$('setupBanner'),bannerDismiss:$('bannerDismiss'),  
+  autoTranslate:$('autoTranslate'),contextLimit:$('contextLimit'),  
+  sttEngine:$('sttEngine'),sttRemoteConfig:$('sttRemoteConfig'),  
+  sttProvider:$('sttProvider'),sttApiKey:$('sttApiKey'),sttBaseUrl:$('sttBaseUrl'),sttModel:$('sttModel'),  
+  transProvider:$('transProvider'),transApiKey:$('transApiKey'),transBaseUrl:$('transBaseUrl'),transModel:$('transModel'),  
+  ttsEnabled:$('ttsEnabled'),ttsAuto:$('ttsAuto'),ttsEngine:$('ttsEngine'),ttsRemoteConfig:$('ttsRemoteConfig'),  
+  ttsProvider:$('ttsProvider'),ttsApiKey:$('ttsApiKey'),ttsBaseUrl:$('ttsBaseUrl'),ttsModel:$('ttsModel'),ttsVoice:$('ttsVoice'),ttsSpeed:$('ttsSpeed'),  
+  mmProvider:$('mmProvider'),mmApiKey:$('mmApiKey'),mmBaseUrl:$('mmBaseUrl'),mmModel:$('mmModel'),  
+};  
+  
+// ============================================================  
+// CONFIG  
+// ============================================================  
+function loadConfig(){  
+  try{ const s=JSON.parse(localStorage.getItem('vf_cfg')||'{}'); cfg={...DEFAULTS,...s}; }  
+  catch{ cfg={...DEFAULTS}; }  
+}  
+function saveConfig(){ localStorage.setItem('vf_cfg',JSON.stringify(cfg)); }  
+function applyConfigToUI(){  
+  dom.autoTranslate.checked=cfg.autoTranslate;  
+  dom.contextLimit.value=cfg.contextLimit;  
+  dom.sttEngine.value=cfg.sttEngine; dom.sttProvider.value=cfg.sttProvider;  
+  dom.sttApiKey.value=cfg.sttApiKey; dom.sttBaseUrl.value=cfg.sttBaseUrl; dom.sttModel.value=cfg.sttModel;  
+  dom.transProvider.value=cfg.transProvider; dom.transApiKey.value=cfg.transApiKey;  
+  dom.transBaseUrl.value=cfg.transBaseUrl; dom.transModel.value=cfg.transModel;  
+  dom.ttsEnabled.checked=cfg.ttsEnabled; dom.ttsAuto.checked=cfg.ttsAuto;  
+  dom.ttsEngine.value=cfg.ttsEngine; dom.ttsProvider.value=cfg.ttsProvider;  
+  dom.ttsApiKey.value=cfg.ttsApiKey; dom.ttsBaseUrl.value=cfg.ttsBaseUrl;  
+  dom.ttsModel.value=cfg.ttsModel; dom.ttsVoice.value=cfg.ttsVoice; dom.ttsSpeed.value=cfg.ttsSpeed;  
+  dom.mmProvider.value=cfg.mmProvider; dom.mmApiKey.value=cfg.mmApiKey;  
+  dom.mmBaseUrl.value=cfg.mmBaseUrl; dom.mmModel.value=cfg.mmModel;  
+  dom.srcLang.value=cfg.srcLang; dom.tgtLang.value=cfg.tgtLang;  
+  updateLangTags(); updateSttRemoteVisibility(); updateTtsRemoteVisibility(); updateTtsPlayBtnVisibility();  
+  // Setup banner  
+  dom.setupBanner.style.display = cfg.bannerDismissed ? 'none' : '';  
+  // Proxy indicator  
+  setCorsMode(cfg.corsMode || 'direct');  
+  // Header button — de-emphasize once key is set  
+  updateSettingsBtnStyle();  
+}  
+function collectConfigFromUI(){  
+  cfg.autoTranslate=dom.autoTranslate.checked; cfg.contextLimit=parseInt(dom.contextLimit.value)||6;  
+  cfg.sttEngine=dom.sttEngine.value; cfg.sttProvider=dom.sttProvider.value;  
+  cfg.sttApiKey=dom.sttApiKey.value; cfg.sttBaseUrl=dom.sttBaseUrl.value; cfg.sttModel=dom.sttModel.value;  
+  cfg.transProvider=dom.transProvider.value; cfg.transApiKey=dom.transApiKey.value;  
+  cfg.transBaseUrl=dom.transBaseUrl.value; cfg.transModel=dom.transModel.value;  
+  cfg.ttsEnabled=dom.ttsEnabled.checked; cfg.ttsAuto=dom.ttsAuto.checked;  
+  cfg.ttsEngine=dom.ttsEngine.value; cfg.ttsProvider=dom.ttsProvider.value;  
+  cfg.ttsApiKey=dom.ttsApiKey.value; cfg.ttsBaseUrl=dom.ttsBaseUrl.value;  
+  cfg.ttsModel=dom.ttsModel.value; cfg.ttsVoice=dom.ttsVoice.value; cfg.ttsSpeed=parseFloat(dom.ttsSpeed.value)||1.0;  
+  cfg.mmProvider=dom.mmProvider.value; cfg.mmApiKey=dom.mmApiKey.value;  
+  cfg.mmBaseUrl=dom.mmBaseUrl.value; cfg.mmModel=dom.mmModel.value;  
+  cfg.srcLang=dom.srcLang.value; cfg.tgtLang=dom.tgtLang.value; cfg.mode=currentMode;  
+}  
+function updateSettingsBtnStyle(){  
+  const hasKey = !!(cfg.transApiKey || (currentMode==='multimodal' && cfg.mmApiKey));  
+  dom.settingsBtn.className = 'btn ' + (hasKey ? '' : 'btn-warn');  
+  dom.settingsBtn.textContent = hasKey ? '⚙️ 设置' : '⚙️ 配置 API Key ⚠';  
+}  
+  
+// ============================================================  
+// UI HELPERS  
+// ============================================================  
+function updateLangTags(){  
+  const sl=dom.srcLang.value, tl=dom.tgtLang.value;  
+  dom.srcLangTag.textContent=sl==='auto'?'AUTO':sl.split('-')[0].toUpperCase();  
+  dom.tgtLangTag.textContent=tl.split('-')[0].toUpperCase();  
+}  
+function updateSttRemoteVisibility(){ dom.sttRemoteConfig.classList.toggle('hidden',dom.sttEngine.value!=='remote'); }  
+function updateTtsRemoteVisibility(){ dom.ttsRemoteConfig.classList.toggle('hidden',dom.ttsEngine.value!=='remote'); }  
+function updateTtsPlayBtnVisibility(){ dom.ttsPlayBtn.style.display=cfg.ttsEnabled?'':'none'; }  
+function setMicState(state){  
+  dom.micBtn.className='mic-btn';  
+  dom.micWrap.classList.remove('listening');  
+  dom.statusDot.className='status-dot';  
+  dom.pushHint.classList.remove('visible');  
+  const icons={idle:'🎙️',listening:'⏹',processing:'⏳',speaking:'🔊',push:'🎙️'};  
+  const labels={idle:'就绪',listening:'识别中…',processing:'翻译中…',speaking:'朗读中…',push:'按住录音，松开翻译'};  
+  dom.micBtn.textContent=icons[state]||icons.idle;  
+  dom.statusText.textContent=labels[state]||labels.idle;  
+  if(state==='listening'){dom.micBtn.classList.add('listening');dom.micWrap.classList.add('listening');dom.statusDot.classList.add('active');}  
+  if(state==='processing'){dom.micBtn.classList.add('processing');dom.statusDot.classList.add('processing');}  
+  if(state==='speaking'){dom.micBtn.classList.add('speaking');dom.statusDot.classList.add('speaking');}  
+  if(state==='push'){dom.micBtn.classList.add('push-to-talk');dom.statusDot.classList.add('warn');dom.pushHint.classList.add('visible');}  
+}  
+function showWaveform(el){  
+  const bars=Array.from({length:7},()=>'<div class="wave-bar"></div>').join('');  
+  el.innerHTML=`<div class="waveform">${bars}</div>`;  
+}  
+function setMode(mode){  
+  currentMode=mode;  
+  dom.modeA.classList.toggle('active',mode==='pipeline');  
+  dom.modeB.classList.toggle('active',mode==='multimodal');  
+  stopEverything();  
+  if(mode==='pipeline') setupPipelineUI(); else setupMultimodalUI();  
+  updateSettingsBtnStyle();  
+}  
+function setupPipelineUI(){  
+  dom.srcText.textContent='点击麦克风开始说话…';  
+  dom.srcText.className='card-text placeholder';  
+  dom.tgtText.textContent='翻译将在此处显示…';  
+  dom.tgtText.className='card-text placeholder';  
+  dom.micBtn.removeEventListener('mousedown',onPushStart);  
+  dom.micBtn.removeEventListener('mouseup',onPushEnd);  
+  dom.micBtn.removeEventListener('touchstart',onPushStart);  
+  dom.micBtn.removeEventListener('touchend',onPushEnd);  
+  if(cfg.sttEngine==='browser'){  
+    dom.micBtn.addEventListener('click',toggleBrowserStt);  
+  } else {  
+    dom.micBtn.removeEventListener('click',toggleBrowserStt);  
+    setMicState('push');  
+    dom.micBtn.addEventListener('mousedown',onPushStart);  
+    dom.micBtn.addEventListener('mouseup',onPushEnd);  
+    dom.micBtn.addEventListener('touchstart',onPushStart,{passive:true});  
+    dom.micBtn.addEventListener('touchend',onPushEnd);  
+  }  
+}  
+function setupMultimodalUI(){  
+  dom.srcText.textContent='按住麦克风录音，松开后发送给多模态 AI…';  
+  dom.srcText.className='card-text placeholder';  
+  dom.tgtText.textContent='翻译将在此处显示…';  
+  dom.tgtText.className='card-text placeholder';  
+  dom.micBtn.removeEventListener('click',toggleBrowserStt);  
+  dom.micBtn.removeEventListener('mousedown',onPushStart);  
+  dom.micBtn.removeEventListener('mouseup',onPushEnd);  
+  dom.micBtn.removeEventListener('touchstart',onPushStart);  
+  dom.micBtn.removeEventListener('touchend',onPushEnd);  
+  setMicState('push');  
+  dom.micBtn.addEventListener('mousedown',onPushStart);  
+  dom.micBtn.addEventListener('mouseup',onPushEnd);  
+  dom.micBtn.addEventListener('touchstart',onPushStart,{passive:true});  
+  dom.micBtn.addEventListener('touchend',onPushEnd);  
+}  
+  
+// ============================================================  
+// TOAST  
+// ============================================================  
+function toast(msg,type='info',duration=5000){  
+  const icons={info:'ℹ️',success:'✅',warn:'⚠️',error:'❌'};  
+  const el=document.createElement('div');  
+  el.className=`toast ${type}`;  
+  el.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span>${msg}</span>`;  
+  dom.toastContainer.appendChild(el);  
+  setTimeout(()=>{el.style.animation='toast-in .3s ease-out reverse';setTimeout(()=>el.remove(),300);},duration);  
+}  
+  
+// ============================================================  
+// HISTORY  
+// ============================================================  
+function addHistory(src,tgt){  
+  history.unshift({src,tgt,ts:Date.now()});  
+  renderHistory();  
+  try{localStorage.setItem('vf_hist',JSON.stringify(history.slice(0,100)));}catch{}  
+}  
+function loadHistory(){  
+  try{history=JSON.parse(localStorage.getItem('vf_hist')||'[]');}catch{history=[];}  
+  renderHistory();  
+}  
+function clearHistory(){history=[];localStorage.removeItem('vf_hist');renderHistory();toast('历史已清除','success');}  
+function renderHistory(){  
+  const list=dom.historyList;  
+  dom.historyCount.textContent=history.length;  
+  if(!history.length){  
+    dom.historyEmpty.style.display='';  
+    list.querySelectorAll('.history-item').forEach(e=>e.remove());  
+    return;  
+  }  
+  dom.historyEmpty.style.display='none';  
+  list.querySelectorAll('.history-item').forEach(e=>e.remove());  
+  history.forEach((item,i)=>{  
+    const el=document.createElement('div'); el.className='history-item';  
+    const ts=new Date(item.ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});  
+    el.innerHTML=`  
+      <div class="history-item-meta"><span>#${history.length-i}</span><span>${ts}</span></div>  
+      <div class="history-item-src">${escHtml(item.src)}</div>  
+      <div class="history-item-tgt">${escHtml(item.tgt)}</div>  
+      <div class="history-item-actions">  
+        <button class="card-action-btn" onclick="copyText(this.dataset.t)" data-t="${escAttr(item.tgt)}">📋</button>  
+        ${cfg.ttsEnabled?`<button class="card-action-btn" onclick="speakText(this.dataset.t)" data-t="${escAttr(item.tgt)}">🔊</button>`:''}  
+      </div>`;  
+    list.appendChild(el);  
+  });  
+}  
+const escHtml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');  
+const escAttr=s=>String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');  
+  
+// ============================================================  
+// BROWSER STT  
+// ============================================================  
+function createSpeechRecognition(){  
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;  
+  if(!SR){toast('浏览器不支持 SpeechRecognition，请使用 Chrome / Edge','error');return null;}  
+  const r=new SR(); r.continuous=true; r.interimResults=true;  
+  r.lang=cfg.srcLang==='auto'?navigator.language:cfg.srcLang; r.maxAlternatives=1;  
+  let finalBuffer='',debounceTimer=null;  
+  r.onresult=e=>{  
+    let interim='';  
+    for(let i=e.resultIndex;i<e.results.length;i++){  
+      const t=e.results[i][0].transcript;  
+      if(e.results[i].isFinal){  
+        finalBuffer+=t+' ';  
+        clearTimeout(debounceTimer);  
+        debounceTimer=setTimeout(()=>{  
+          const txt=finalBuffer.trim();  
+          if(txt){finalBuffer='';handleFinalTranscript(txt);}  
+        },800);  
+      } else { interim+=t; }  
+    }  
+    if(finalBuffer||interim){  
+      dom.srcText.textContent=(finalBuffer+interim).trim();  
+      dom.srcText.className='card-text'+(interim&&!finalBuffer?' interim':'');  
+      dom.srcCard.classList.add('active');  
+    }  
+  };  
+  r.onerror=e=>{  
+    if(e.error==='no-speech'||e.error==='aborted') return;  
+    toast(`语音识别错误: ${e.error}`,'error');  
+    setMicState('idle'); isListening=false;  
+  };  
+  r.onend=()=>{ if(isListening){try{r.start();}catch{}} };  
+  return r;  
+}  
+function toggleBrowserStt(){  
+  if(isProcessing) return;  
+  if(isListening) stopBrowserStt(); else startBrowserStt();  
+}  
+function startBrowserStt(){  
+  if(!cfg.transApiKey){toast('请先点击右上角「⚙️ 配置 API Key」填写翻译 API Key','warn',6000);openSettings();return;}  
+  if(!recognition) recognition=createSpeechRecognition();  
+  if(!recognition) return;  
+  try{recognition.start();isListening=true;setMicState('listening');}  
+  catch(e){toast('无法启动语音识别：'+e.message,'error');}  
+}  
+function stopBrowserStt(){isListening=false;if(recognition){try{recognition.stop();}catch{}}setMicState('idle');}  
+  
+// ============================================================  
+// PUSH-TO-TALK (Remote STT & Multimodal)  
+// ============================================================  
+async function onPushStart(e){  
+  e.preventDefault();  
+  if(pushRecording) return;  
+  const neededKey = currentMode==='multimodal' ? cfg.mmApiKey : (cfg.sttEngine==='remote'?cfg.sttApiKey:cfg.transApiKey);  
+  if(!neededKey){toast('请先点击右上角「⚙️ 配置 API Key」填写 API Key','warn',6000);openSettings();return;}  
+  pushRecording=true; audioChunks=[];  
+  try{  
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});  
+    mediaRecorder=new MediaRecorder(stream,{mimeType:getSupportedMimeType()});  
+    mediaRecorder.ondataavailable=ev=>{if(ev.data.size>0)audioChunks.push(ev.data);};  
+    mediaRecorder.start(100);  
+    setMicState('listening');  
+    dom.srcCard.classList.add('active');  
+    showWaveform(dom.srcText);  
+  } catch(err){  
+    pushRecording=false;  
+    toast('麦克风访问被拒绝：'+err.message,'error');  
+  }  
+}  
+async function onPushEnd(e){  
+  if(!pushRecording||!mediaRecorder) return;  
+  pushRecording=false;  
+  mediaRecorder.stop();  
+  mediaRecorder.onstop=async()=>{  
+    mediaRecorder.stream.getTracks().forEach(t=>t.stop());  
+    const mimeType=mediaRecorder.mimeType;  
+    const blob=new Blob(audioChunks,{type:mimeType});  
+    audioChunks=[];  
+    setMicState('processing');  
+    isProcessing=true;  
+    try{  
+      if(currentMode==='multimodal') await handleMultimodalAudio(blob,mimeType);  
+      else{  
+        const transcript=await remoteSTT(blob);  
+        if(transcript) await handleFinalTranscript(transcript);  
+        else{isProcessing=false;setMicState('push');}  
+      }  
+    } catch(err){  
+      toast(err.message,'error',8000);  
+      isProcessing=false; setMicState(currentMode==='pipeline'&&cfg.sttEngine==='browser'?'idle':'push');  
+    }  
+  };  
+}  
+function getSupportedMimeType(){  
+  const types=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];  
+  for(const t of types){if(MediaRecorder.isTypeSupported(t))return t;}  
+  return 'audio/webm';  
+}  
+  
+// ============================================================  
+// REMOTE STT  
+// ============================================================  
+async function remoteSTT(blob){  
+  if(!cfg.sttApiKey){toast('请在设置中填写 STT API Key','error');return null;}  
+  const baseUrl=cfg.sttBaseUrl.replace(/\/$/,'');  
+  const form=new FormData();  
+  form.append('file',blob,'audio.webm');  
+  form.append('model',cfg.sttModel);  
+  if(cfg.srcLang!=='auto') form.append('language',cfg.srcLang.split('-')[0]);  
+  const res=await apiFetch(`${baseUrl}/audio/transcriptions`,{  
+    method:'POST',  
+    headers:{'Authorization':`Bearer ${cfg.sttApiKey}`},  
+    body:form,  
+  });  
+  if(!res.ok){const e=await res.text();throw new Error(`STT API ${res.status}: ${e.slice(0,200)}`);}  
+  const data=await res.json();  
+  return data.text?.trim()||'';  
+}  
+  
+// ============================================================  
+// TRANSLATION  
+// ============================================================  
+function buildTranslationMessages(text){  
+  const tgt=getLangName(cfg.tgtLang);  
+  const src=cfg.srcLang==='auto'?'任意语言':getLangName(cfg.srcLang);  
+  const sys=`你是专业翻译员。将用户输入的${src}文本翻译为${tgt}。只输出译文，不要解释，不要前缀后缀，保持原文语气。`;  
+  const msgs=[{role:'system',content:sys}];  
+  const limit=Math.min(cfg.contextLimit,history.length);  
+  for(let i=limit-1;i>=0;i--){  
+    msgs.push({role:'user',content:history[i].src});  
+    msgs.push({role:'assistant',content:history[i].tgt});  
+  }  
+  msgs.push({role:'user',content:text});  
+  return msgs;  
+}  
+async function translate(text){  
+  if(!cfg.transApiKey){toast('请先配置翻译 API Key','error',6000);openSettings();return null;}  
+  const baseUrl=cfg.transBaseUrl.replace(/\/$/,'');  
+  const headers={'Content-Type':'application/json','Authorization':`Bearer ${cfg.transApiKey}`};  
+  if(cfg.transProvider==='openrouter'||cfg.transBaseUrl.includes('openrouter')){  
+    headers['HTTP-Referer']='https://voiceflow.app';  
+    headers['X-Title']='VoiceFlow';  
+  }  
+  const res=await apiFetch(`${baseUrl}/chat/completions`,{  
+    method:'POST',headers,  
+    body:JSON.stringify({model:cfg.transModel,messages:buildTranslationMessages(text),max_tokens:1000,temperature:0.3}),  
+  });  
+  if(!res.ok){const e=await res.text();throw new Error(`翻译 API ${res.status}: ${e.slice(0,300)}`);}  
+  const data=await res.json();  
+  return data.choices?.[0]?.message?.content?.trim()||'';  
+}  
+  
+// ============================================================  
+// MULTIMODAL  
+// ============================================================  
+async function handleMultimodalAudio(blob,mimeType){  
+  if(!cfg.mmApiKey){toast('请先配置多模态 API Key','error',6000);openSettings();isProcessing=false;setMicState('push');return;}  
+  const base64=await blobToBase64(blob);  
+  const format=mimeType.includes('webm')?'webm':mimeType.includes('ogg')?'ogg':'mp4';  
+  const tgt=getLangName(cfg.tgtLang);  
+  const srcHint=cfg.srcLang==='auto'?'':`（源语言为${getLangName(cfg.srcLang)}）`;  
+  const sys=`你是专业翻译员。将输入的音频中的语音内容翻译为${tgt}${srcHint}。只输出译文，不要任何解释、前缀或后缀。`;  
+  const msgs=[{role:'system',content:sys}];  
+  const limit=Math.min(cfg.contextLimit,history.length);  
+  for(let i=limit-1;i>=0;i--){  
+    msgs.push({role:'user',content:`原文：${history[i].src}`});  
+    msgs.push({role:'assistant',content:history[i].tgt});  
+  }  
+  msgs.push({role:'user',content:[{type:'input_audio',input_audio:{data:base64,format}}]});  
+  const baseUrl=cfg.mmBaseUrl.replace(/\/$/,'');  
+  const headers={'Content-Type':'application/json','Authorization':`Bearer ${cfg.mmApiKey}`};  
+  if(cfg.mmProvider==='openrouter'||cfg.mmBaseUrl.includes('openrouter')){  
+    headers['HTTP-Referer']='https://voiceflow.app';  
+    headers['X-Title']='VoiceFlow';  
+  }  
+  const res=await apiFetch(`${baseUrl}/chat/completions`,{  
+    method:'POST',headers,  
+    body:JSON.stringify({model:cfg.mmModel,messages:msgs,max_tokens:1000,temperature:0.3,modalities:['text']}),  
+  });  
+  if(!res.ok){const e=await res.text();throw new Error(`多模态 API ${res.status}: ${e.slice(0,300)}`);}  
+  const data=await res.json();  
+  const translation=data.choices?.[0]?.message?.content?.trim()||'';  
+  if(!translation){toast('多模态模型未返回翻译','warn');isProcessing=false;setMicState('push');return;}  
+  dom.srcText.textContent='🎵 音频输入';  
+  dom.srcText.className='card-text';  
+  dom.tgtText.textContent=translation;  
+  dom.tgtText.className='card-text';  
+  dom.tgtCard.classList.add('active');  
+  addHistory('（音频输入）',translation);  
+  isProcessing=false; setMicState('push');  
+  if(cfg.ttsEnabled&&cfg.ttsAuto) await speakText(translation);  
+}  
+  
+// ============================================================  
+// PIPELINE HANDLER  
+// ============================================================  
+async function handleFinalTranscript(text){  
+  if(!text.trim()){isProcessing=false;return;}  
+  dom.srcText.textContent=text; dom.srcText.className='card-text'; dom.srcCard.classList.add('active');  
+  setMicState('processing');  
+  dom.tgtText.className='card-text';  
+  dom.tgtText.innerHTML='<span class="spinner"></span> 翻译中…';  
+  dom.tgtCard.classList.add('active');  
+  try{  
+    const result=await translate(text);  
+    if(result){  
+      dom.tgtText.textContent=result;  
+      addHistory(text,result);  
+      if(cfg.ttsEnabled&&cfg.ttsAuto){setMicState('speaking');await speakText(result);}  
+    } else {dom.tgtText.textContent='（翻译失败）';}  
+  } catch(err){  
+    dom.tgtText.textContent='（错误）';  
+    toast(err.message,'error',8000);  
+  }  
+  isProcessing=false;  
+  const next=(currentMode==='pipeline'&&cfg.sttEngine==='browser'&&isListening)?'listening':(cfg.sttEngine==='remote'||currentMode==='multimodal'?'push':'idle');  
+  setMicState(next);  
+}  
+  
+// ============================================================  
+// TTS  
+// ============================================================  
+async function speakText(text){  
+  if(!cfg.ttsEnabled) return;  
+  if(ttsAudio){ttsAudio.pause();ttsAudio=null;}  
+  if(cfg.ttsEngine==='browser') return browserTTS(text);  
+  else return remoteTTS(text);  
+}  
+function browserTTS(text){  
+  return new Promise(resolve=>{  
+    const synth=window.speechSynthesis;  
+    if(!synth){toast('浏览器不支持 TTS','warn');resolve();return;}  
+    synth.cancel();  
+    const u=new SpeechSynthesisUtterance(text);  
+    u.lang=cfg.tgtLang; u.rate=1.0;  
+    u.onend=resolve; u.onerror=resolve; synth.speak(u);  
+  });  
+}  
+async function remoteTTS(text){  
+  if(!cfg.ttsApiKey){toast('请在设置中填写 TTS API Key','error');return;}  
+  const baseUrl=cfg.ttsBaseUrl.replace(/\/$/,'');  
+  try{  
+    const res=await apiFetch(`${baseUrl}/audio/speech`,{  
+      method:'POST',  
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${cfg.ttsApiKey}`},  
+      body:JSON.stringify({model:cfg.ttsModel,input:text,voice:cfg.ttsVoice,response_format:'mp3',speed:cfg.ttsSpeed}),  
+    });  
+    if(!res.ok){const e=await res.text();throw new Error(`TTS ${res.status}: ${e.slice(0,200)}`);}  
+    const blob=await res.blob();  
+    const url=URL.createObjectURL(blob);  
+    ttsAudio=new Audio(url);  
+    await new Promise((res,rej)=>{ttsAudio.onended=res;ttsAudio.onerror=rej;ttsAudio.play();});  
+    URL.revokeObjectURL(url);  
+  }catch(err){toast('TTS 错误：'+err.message,'error');}  
+}  
+  
+// ============================================================  
+// UTILS  
+// ============================================================  
+function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onloadend=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob);});}  
+function copyText(text){navigator.clipboard.writeText(text).then(()=>toast('已复制','success')).catch(()=>{const el=document.createElement('textarea');el.value=text;el.style.cssText='position:fixed;opacity:0';document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast('已复制','success');});}  
+function getLangName(code){const m={'auto':'任意','zh-CN':'中文','en-US':'英语','en-GB':'英语(英式)','ja-JP':'日语','ko-KR':'韩语','fr-FR':'法语','de-DE':'德语','es-ES':'西班牙语','pt-BR':'葡萄牙语','ru-RU':'俄语','ar-SA':'阿拉伯语','hi-IN':'印地语','th-TH':'泰语','vi-VN':'越南语','it-IT':'意大利语'};return m[code]||code;}  
+function stopEverything(){  
+  isListening=false;isProcessing=false;pushRecording=false;  
+  if(recognition){try{recognition.stop();}catch{}recognition=null;}  
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){try{mediaRecorder.stop();}catch{}}  
+  if(window.speechSynthesis) speechSynthesis.cancel();  
+  if(ttsAudio){ttsAudio.pause();ttsAudio=null;}  
+  dom.micBtn.removeEventListener('click',toggleBrowserStt);  
+  dom.micBtn.removeEventListener('mousedown',onPushStart);  
+  dom.micBtn.removeEventListener('mouseup',onPushEnd);  
+  dom.micBtn.removeEventListener('touchstart',onPushStart);  
+  dom.micBtn.removeEventListener('touchend',onPushEnd);  
+  setMicState('idle');  
+}  
+  
+// ============================================================  
+// SETTINGS DRAWER  
+// ============================================================  
+function openSettings(){dom.overlay.classList.add('open');dom.drawer.classList.add('open');}  
+function closeSettings(){dom.overlay.classList.remove('open');dom.drawer.classList.remove('open');}  
+  
+// Provider preset auto-fill  
+dom.transProvider.addEventListener('change',()=>{const p=PROVIDER_PRESETS.trans[dom.transProvider.value]||{};if(p.baseUrl)dom.transBaseUrl.value=p.baseUrl;if(p.model)dom.transModel.value=p.model;});  
+dom.sttProvider.addEventListener('change',()=>{const p=PROVIDER_PRESETS.stt[dom.sttProvider.value]||{};if(p.baseUrl)dom.sttBaseUrl.value=p.baseUrl;if(p.model)dom.sttModel.value=p.model;});  
+dom.ttsProvider.addEventListener('change',()=>{const p=PROVIDER_PRESETS.tts[dom.ttsProvider.value]||{};if(p.baseUrl)dom.ttsBaseUrl.value=p.baseUrl;if(p.model)dom.ttsModel.value=p.model;if(p.voice)dom.ttsVoice.value=p.voice;});  
+dom.mmProvider.addEventListener('change',()=>{const p=PROVIDER_PRESETS.mm[dom.mmProvider.value]||{};if(p.baseUrl)dom.mmBaseUrl.value=p.baseUrl;if(p.model)dom.mmModel.value=p.model;});  
+dom.sttEngine.addEventListener('change',updateSttRemoteVisibility);  
+dom.ttsEngine.addEventListener('change',updateTtsRemoteVisibility);  
+dom.settingsBtn.addEventListener('click',openSettings);  
+dom.closeDrawer.addEventListener('click',closeSettings);  
+dom.overlay.addEventListener('click',closeSettings);  
+  
+// Highlight empty required key fields when drawer opens  
+dom.settingsBtn.addEventListener('click',()=>{  
+  setTimeout(()=>{  
+    [dom.transApiKey,dom.sttApiKey,dom.ttsApiKey,dom.mmApiKey].forEach(el=>{  
+      el.classList.toggle('required-empty',!el.value.trim());  
+    });  
+  },100);  
+});  
+// Remove highlight on input  
+[dom.transApiKey,dom.sttApiKey,dom.ttsApiKey,dom.mmApiKey].forEach(el=>{  
+  el.addEventListener('input',()=>el.classList.remove('required-empty'));  
+});  
+  
+dom.saveSettings.addEventListener('click',()=>{  
+  collectConfigFromUI(); saveConfig(); closeSettings();  
+  updateLangTags(); updateTtsPlayBtnVisibility(); updateSettingsBtnStyle();  
+  toast('设置已保存','success');  
+  stopEverything();  
+  if(currentMode==='pipeline') setupPipelineUI(); else setupMultimodalUI();  
+});  
+dom.resetSettings.addEventListener('click',()=>{  
+  if(!confirm('确定恢复所有默认设置？')) return;  
+  cfg={...DEFAULTS}; saveConfig(); applyConfigToUI();  
+  toast('设置已重置','info');  
+});  
+  
+// ============================================================  
+// SETUP BANNER  
+// ============================================================  
+dom.bannerDismiss.addEventListener('click',()=>{  
+  cfg.bannerDismissed=true; saveConfig();  
+  dom.setupBanner.style.transition='opacity .4s'; dom.setupBanner.style.opacity='0';  
+  setTimeout(()=>dom.setupBanner.style.display='none',400);  
+});  
+  
+// ============================================================  
+// MAIN UI EVENTS  
+// ============================================================  
+dom.modeA.addEventListener('click',()=>{cfg.mode='pipeline';saveConfig();setMode('pipeline');});  
+dom.modeB.addEventListener('click',()=>{cfg.mode='multimodal';saveConfig();setMode('multimodal');});  
+dom.swapLang.addEventListener('click',()=>{  
+  if(dom.srcLang.value==='auto'){toast('自动检测模式下无法交换语言','warn');return;}  
+  const tmp=dom.srcLang.value;dom.srcLang.value=dom.tgtLang.value;dom.tgtLang.value=tmp;  
+  cfg.srcLang=dom.srcLang.value;cfg.tgtLang=dom.tgtLang.value;saveConfig();updateLangTags();  
+});  
+dom.srcLang.addEventListener('change',()=>{cfg.srcLang=dom.srcLang.value;saveConfig();updateLangTags();});  
+dom.tgtLang.addEventListener('change',()=>{cfg.tgtLang=dom.tgtLang.value;saveConfig();updateLangTags();});  
+dom.copySrc.addEventListener('click',()=>{const t=dom.srcText.textContent;if(t&&!dom.srcText.classList.contains('placeholder'))copyText(t);});  
+dom.copyTgt.addEventListener('click',()=>{const t=dom.tgtText.textContent;if(t&&!dom.tgtText.classList.contains('placeholder'))copyText(t);});  
+dom.ttsPlayBtn.addEventListener('click',()=>{const t=dom.tgtText.textContent;if(t&&!dom.tgtText.classList.contains('placeholder')&&cfg.ttsEnabled)speakText(t);});  
+dom.clearHistoryBtn.addEventListener('click',clearHistory);  
+dom.historyHeader.addEventListener('click',e=>{  
+  if(e.target.closest('#clearHistoryBtn')) return;  
+  const list=$('historyList'),open=!list.classList.contains('collapsed');  
+  list.classList.toggle('collapsed',open);  
+  dom.historyToggle.classList.toggle('open',!open);  
+});  
+  
+// ============================================================  
+// INIT  
+// ============================================================  
+function init(){  
+  loadConfig(); loadHistory(); applyConfigToUI(); setMode(cfg.mode||'pipeline');  
+  // Global touch/mouseup for push-to-talk released outside button  
+  document.addEventListener('touchend',e=>{if(pushRecording)onPushEnd(e);});  
+  document.addEventListener('mouseup',e=>{if(pushRecording)onPushEnd(e);});  
+  // Show API key reminder if no key configured after 2 seconds  
+  setTimeout(()=>{  
+    if(!cfg.transApiKey&&!cfg.bannerDismissed){  
+      toast('⚠️ 尚未配置翻译 API Key，请点击右上角「⚙️ 配置 API Key」按钮','warn',8000);  
+    }  
+  },2000);  
+  console.log('✅ VoiceFlow 初始化完成');  
+}  
+init();  
+</script>  
+</body>  
+</html>  
