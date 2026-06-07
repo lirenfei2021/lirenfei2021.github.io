@@ -41,18 +41,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .step-num{font-family:var(--font-mono);font-size:11px;color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius-full);min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .step-text{font-size:12px;color:var(--text-1);line-height:1.5;} .step-text strong{color:var(--text-0);}
 
-/* CORS BANNER */
-#corsBanner{background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(6,182,212,.06));border:1.5px solid rgba(139,92,246,.4);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start;}
-#corsBanner.hidden{display:none!important;}
-.cors-icon{font-size:20px;flex-shrink:0;}
-.cors-title{font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:6px;font-family:var(--font-display);}
-.cors-body{font-size:12px;color:var(--text-1);line-height:1.6;}
-.cors-body code{font-family:var(--font-mono);font-size:11px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.25);padding:1px 6px;border-radius:4px;color:#c4b5fd;}
-.cors-options{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.cors-opt-btn{font-size:11px;padding:5px 11px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font-mono);border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.12);color:#a78bfa;transition:all var(--transition);}
-.cors-opt-btn:hover{background:rgba(139,92,246,.25);}
-.cors-opt-btn.active{background:rgba(139,92,246,.3);border-color:#8b5cf6;color:#fff;}
-
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-mark{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -73,12 +61,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .mode-btn{flex:1;padding:10px 12px;border:1px solid transparent;background:transparent;color:var(--text-2);border-radius:var(--radius-md);font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:all var(--transition);display:flex;align-items:center;justify-content:center;gap:6px;}
 .mode-btn.active{background:var(--bg-4);border-color:var(--border-active);color:var(--text-0);box-shadow:0 1px 4px rgba(0,0,0,.3);}
 .mode-badge{font-size:10px;padding:1px 6px;border-radius:var(--radius-full);background:var(--accent);color:#fff;font-family:var(--font-mono);}
-
-#proxyIndicator{display:flex;align-items:center;gap:8px;font-size:11px;font-family:var(--font-mono);color:var(--text-3);margin-bottom:16px;padding:8px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-md);}
-#proxyIndicator.active{color:#a78bfa;border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.05);}
-#proxyIndicator .pi-dot{width:6px;height:6px;border-radius:50%;background:var(--text-3);flex-shrink:0;}
-#proxyIndicator.active .pi-dot{background:#8b5cf6;box-shadow:0 0 6px #8b5cf6;}
-#proxyIndicator .pi-change{margin-left:auto;color:var(--accent);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;}
 
 .lang-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
 .lang-select-wrap{flex:1;position:relative;}
@@ -241,36 +223,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="banner-step"><span class="step-num">1</span><div class="step-text">点击右上角 <strong>⚙️ 配置 API Key</strong> 打开设置</div></div>
       <div class="banner-step"><span class="step-num">2</span><div class="step-text">在「翻译 API」填入 <strong>OpenRouter / DeepSeek</strong> Key</div></div>
       <div class="banner-step"><span class="step-num">3</span><div class="step-text">选择 <strong>🎙️ 语音</strong> 或 <strong>✏️ 文字</strong> 输入开始翻译</div></div>
-      <div class="banner-step"><span class="step-num">4</span><div class="step-text">若遇 CORS 错误，查看下方<strong>代理设置</strong>绕过</div></div>
     </div>
-  </div>
-
-  <!-- CORS BANNER -->
-  <div id="corsBanner">
-    <span class="cors-icon">🔒</span>
-    <div style="flex:1">
-      <div class="cors-title">浏览器跨域（CORS）与防火墙说明</div>
-      <div class="cors-body">静态网页直接调用第三方 API 时，浏览器同源策略可能阻止请求（CORS 错误）。选择以下方案绕开：</div>
-      <div class="cors-options">
-        <button class="cors-opt-btn active" id="corsOptDirect"      onclick="setCorsMode('direct')">🌐 直连（默认）</button>
-        <button class="cors-opt-btn"         id="corsOptProxy"       onclick="setCorsMode('proxy')">🔀 本地代理</button>
-        <button class="cors-opt-btn"         id="corsOptCorsAnywhere" onclick="setCorsMode('corsproxy')">☁️ cors-anywhere</button>
-      </div>
-      <div id="corsProxyDetail" class="hidden" style="margin-top:10px;font-size:11px;color:var(--text-2);line-height:1.7;">
-        🖥️ 终端运行：<code>npx local-cors-proxy --proxyUrl https://openrouter.ai --port 8010</code><br>
-        再将 Base URL 改为 <code>http://localhost:8010/proxy</code>。
-      </div>
-      <div id="corsAnywhereDetail" class="hidden" style="margin-top:10px;font-size:11px;color:var(--text-2);line-height:1.7;">
-        ☁️ 自动加前缀 <code>https://cors-anywhere.herokuapp.com/</code>。API Key 经第三方，仅供测试。
-      </div>
-    </div>
-  </div>
-
-  <!-- PROXY INDICATOR -->
-  <div id="proxyIndicator">
-    <div class="pi-dot"></div>
-    <span id="piText">请求模式：直连</span>
-    <span class="pi-change" onclick="document.getElementById('corsBanner').classList.toggle('hidden')">更改 ▾</span>
   </div>
 
   <!-- MODE SWITCHER -->
@@ -600,7 +553,7 @@ const DEFAULTS = {
   ttsModel: 'tts-1', ttsVoice: 'alloy', ttsSpeed: 1.0,
   mmProvider: 'openrouter', mmApiKey: '',
   mmBaseUrl: 'https://openrouter.ai/api/v1', mmModel: 'openai/gpt-4o-audio-preview',
-  corsMode: 'direct', bannerDismissed: false,
+  bannerDismissed: false,
 };
 
 const PROVIDER_PRESETS = {
@@ -639,50 +592,8 @@ let currentMode      = 'pipeline';  // 'pipeline' | 'multimodal'
 let currentInputMode = 'voice';     // 'voice' | 'text'
 let ttsAudio = null;
 
-// ============================================================
-// CORS / PROXY — 绕过浏览器同源限制和企业防火墙
-// ============================================================
-const CORS_ANYWHERE = 'https://cors-anywhere.herokuapp.com/';
-const LOCAL_PROXY   = 'http://localhost:8010/proxy/';
-
-function proxyUrl(url) {
-  if (cfg.corsMode === 'proxy')     return LOCAL_PROXY + url;
-  if (cfg.corsMode === 'corsproxy') return CORS_ANYWHERE + url;
-  return url;
-}
-async function apiFetch(url, opts = {}) {
-  const target = proxyUrl(url);
-  if (cfg.corsMode === 'corsproxy') {
-    opts.headers = opts.headers || {};
-    opts.headers['X-Requested-With'] = 'XMLHttpRequest';
-  }
-  try {
-    return await fetch(target, opts);
-  } catch (err) {
-    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      const hint =
-        cfg.corsMode === 'direct'     ? '直连失败（CORS/防火墙）。点击页面「更改」切换代理模式。' :
-        cfg.corsMode === 'proxy'      ? '本地代理失败。请确认已运行 local-cors-proxy。' :
-                                        'cors-anywhere 失败。请先访问其演示页激活：https://cors-anywhere.herokuapp.com/corsdemo';
-      throw new Error(hint);
-    }
-    throw err;
-  }
-}
-window.setCorsMode = function(mode) {
-  cfg.corsMode = mode; saveConfig();
-  ['direct','proxy','corsproxy'].forEach(m => {
-    const ids = { direct:'corsOptDirect', proxy:'corsOptProxy', corsproxy:'corsOptCorsAnywhere' };
-    const el = document.getElementById(ids[m]);
-    if (el) el.classList.toggle('active', m === mode);
-  });
-  document.getElementById('corsProxyDetail').classList.toggle('hidden', mode !== 'proxy');
-  document.getElementById('corsAnywhereDetail').classList.toggle('hidden', mode !== 'corsproxy');
-  const labels = { direct:'请求模式：直连', proxy:'请求模式：本地代理 (localhost:8010)', corsproxy:'请求模式：cors-anywhere 公共代理' };
-  document.getElementById('piText').textContent = labels[mode];
-  document.getElementById('proxyIndicator').classList.toggle('active', mode !== 'direct');
-  toast({ direct:'已切换为直连', proxy:'已切换为本地代理，请运行 local-cors-proxy', corsproxy:'已切换为 cors-anywhere（仅测试）' }[mode], 'info');
-};
+// 直接使用 fetch，无代理层
+const apiFetch = (url, opts = {}) => fetch(url, opts);
 
 // ============================================================
 // DOM REFS
@@ -746,7 +657,6 @@ function applyConfigToUI() {
   updateLangTags(); updateSttRemoteVisibility(); updateTtsRemoteVisibility();
   updateTtsPlayBtnVisibility(); updateThinkingSectionVisibility();
   dom.setupBanner.style.display = cfg.bannerDismissed ? 'none' : '';
-  setCorsMode(cfg.corsMode || 'direct');
   updateSettingsBtnStyle();
 }
 function collectConfigFromUI() {
